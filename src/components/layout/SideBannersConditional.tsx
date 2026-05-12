@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { SideBanners } from "./SideBanners";
+import type { StorefrontBanner } from "@/src/types/storefront-home.types";
 
 // Routes that should render without side banners.
 // Auth pages: focused flow — banners are distracting.
@@ -30,9 +31,9 @@ const SUPPRESSED_PREFIXES = [
  * SideBannersConditional — renders SideBanners on all pages except those in
  * SUPPRESSED_PREFIXES (auth flows and legal reading pages).
  */
-export function SideBannersConditional() {
+export function SideBannersConditional({ banners }: { banners: StorefrontBanner[] }) {
   const pathname = usePathname();
   const isSuppressed = SUPPRESSED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
   if (isSuppressed) return null;
-  return <SideBanners />;
+  return <SideBanners banners={banners} />;
 }

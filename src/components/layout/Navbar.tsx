@@ -1,61 +1,111 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bars3Icon,
   ChevronDownIcon,
   SparklesIcon,
-  TagIcon,
 } from "@heroicons/react/24/outline";
-
-import { Drawer } from "@/src/components/ui";
 import { SidebarMegaMenu } from "@/src/components/navigation";
-import { STORE_MEGA_MENU } from "@/src/navigation/megamenu.config";
+import type { SidebarMenuCategory } from "@/src/components/navigation";
+import { Drawer } from "@/src/components/ui";
+import { toSidebarCategories } from "@/src/services/storefront-mega-menu.service";
+import type {
+  StorefrontCategoryNode,
+  StorefrontMenuItem,
+} from "@/src/types/storefront-layout.types";
 
-// ─── Nav link definitions ─────────────────────────────────────────────────────
-
-interface NavLink {
-  label: string;
-  href: string;
-  badge?: string;
-  highlight?: boolean;
+export interface NavbarProps {
+  navLinks: StorefrontMenuItem[];
+  mobileLinks: StorefrontMenuItem[];
+  categories: StorefrontCategoryNode[];
 }
 
-const NAV_LINKS: NavLink[] = [
-  { label: "Laptop", href: "/products/laptop" },
-  { label: "PC Gaming", href: "/products/pc-gaming" },
-  { label: "CPU", href: "/products/cpu" },
-  { label: "GPU", href: "/products/gpu" },
-  { label: "RAM", href: "/products/ram" },
-  { label: "SSD", href: "/products/ssd" },
-  { label: "PSU", href: "/products/psu" },
-  { label: "Mainboard", href: "/products/mainboard" },
-  { label: "Màn Hình", href: "/products/man-hinh" },
-  { label: "Gaming Gear", href: "/products/gaming-gear" },
-  { label: "Linh Kiện", href: "/products/linh-kien" },
-  { label: "Phụ Kiện", href: "/products/phu-kien" },
-  { label: "Khuyến Mãi", href: "/khuyen-mai", badge: "Hot!", highlight: true },
-];
+function extractNavBadge(label: string): {
+  cleanLabel: string;
+  badge: "HOT" | "SALE" | "NEW" | null;
+} {
+  const trimmed = label.trim();
+  const badgeMatch = trimmed.match(/\b(HOT|SALE|NEW)\b/i);
 
-// ─── Component ────────────────────────────────────────────────────────────────
+  if (!badgeMatch) {
+    return { cleanLabel: trimmed, badge: null };
+  }
 
-/**
- * Navbar — category navigation bar.
- *
- * Desktop: dark bar with "Tất cả danh mục" mega-menu trigger + quick-access links.
- * Mobile/Tablet: hamburger button opens a left-side Drawer containing the full SidebarMegaMenu.
- */
-export function Navbar() {
+  return {
+    cleanLabel: trimmed.replace(badgeMatch[0], "").replace(/\s{2,}/g, " ").trim(),
+    badge: badgeMatch[0].toUpperCase() as "HOT" | "SALE" | "NEW",
+  };
+}
+
+export function Navbar({ navLinks, mobileLinks, categories }: NavbarProps) {
   const pathname = usePathname();
-
-  // Desktop mega menu hover state
   const [megaOpen, setMegaOpen] = useState(false);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Mobile drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [shouldMarquee, setShouldMarquee] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const quickLinksViewportRef = useRef<HTMLDivElement | null>(null);
+  const quickLinksTrackRef = useRef<HTMLDivElement | null>(null);
+
+  const sidebarCategories = useMemo<SidebarMenuCategory[]>(
+    () => toSidebarCategories(categories),
+    [categories],
+  );
+  const navMarqueeDuration = useMemo(() => {
+    const itemCount = Math.max(navLinks.length, 1);
+    return Math.max(itemCount * 5.5, 28);
+  }, [navLinks.length]);
+
+  function renderNavLink(link: StorefrontMenuItem, isDuplicate = false) {
+    const isActive =
+      pathname === link.url || pathname.startsWith(`${link.url}/`);
+    const { cleanLabel, badge } = extractNavBadge(link.label);
+    const isProminent =
+      badge !== null || /khuyen mai/i.test(link.label);
+
+    return (
+      <Link
+        key={`${link.id}-${isDuplicate ? "dup" : "main"}`}
+        href={link.url}
+        target={link.target === "_blank" ? "_blank" : undefined}
+        rel={link.target === "_blank" ? "noopener noreferrer" : undefined}
+        aria-current={!isDuplicate && isActive ? "page" : undefined}
+        aria-hidden={isDuplicate ? "true" : undefined}
+        tabIndex={isDuplicate ? -1 : undefined}
+        className={[
+          "inline-flex shrink-0 items-center gap-1.5 border-b-2 border-transparent pb-0.5 text-sm font-medium tracking-normal transition-colors focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400",
+          isActive
+            ? "border-primary-600 text-primary-600"
+            : isProminent
+              ? "text-primary-600 hover:border-primary-600 hover:text-primary-700"
+              : "text-secondary-600 hover:border-primary-600 hover:text-primary-600",
+        ].join(" ")}
+      >
+        <span>{cleanLabel}</span>
+        {badge && (
+          <span
+            className={[
+              "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none",
+              badge === "HOT"
+                ? "bg-error-500 text-white"
+                : badge === "SALE"
+                  ? "bg-warning-500 text-secondary-950"
+                  : "bg-primary-500 text-white",
+            ].join(" ")}
+          >
+            {badge}
+          </span>
+        )}
+        {!badge && isProminent && (
+          <span className="inline-flex items-center rounded-full bg-warning-100 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-warning-700">
+            Sale
+          </span>
+        )}
+      </Link>
+    );
+  }
 
   function openMega() {
     if (closeTimer.current) clearTimeout(closeTimer.current);
@@ -66,42 +116,51 @@ export function Navbar() {
     closeTimer.current = setTimeout(() => setMegaOpen(false), 180);
   }
 
+  useEffect(() => {
+    const viewport = quickLinksViewportRef.current;
+    const track = quickLinksTrackRef.current;
+
+    if (!viewport || !track) {
+      return;
+    }
+
+    const updateOverflowState = () => {
+      setShouldMarquee(track.scrollWidth > viewport.clientWidth + 8);
+    };
+
+    updateOverflowState();
+
+    const observer = new ResizeObserver(() => {
+      updateOverflowState();
+    });
+
+    observer.observe(viewport);
+    observer.observe(track);
+    window.addEventListener("resize", updateOverflowState);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateOverflowState);
+    };
+  }, [navLinks]);
+
   return (
     <>
-      {/* ── Nav bar ── */}
-      <nav
-        aria-label="Category navigation"
-        className="bg-white border-b border-secondary-200"
-      >
-        {/*
-         * `relative` on this container is the positioning anchor for the mega menu panel.
-         * The panel uses `left-0 right-0` to fill the exact same width as this container,
-         * matching the header layout precisely.
-         */}
-        <div className="mx-auto max-w-[1400px] px-4 relative">
-
-          {/* ── Nav row ── */}
+      <nav aria-label="Category navigation" className="border-b border-secondary-200 bg-white">
+        <div className="relative mx-auto max-w-[1400px] px-4">
           <div className="flex h-12 items-center gap-0">
-
-            {/* ── Mobile / Tablet: Hamburger ── */}
             <button
               type="button"
               aria-label="Mở danh mục sản phẩm"
               onClick={() => setDrawerOpen(true)}
-              className="lg:hidden flex items-center gap-2 px-3 py-2 text-sm font-medium text-secondary-700 rounded-md border border-secondary-200 bg-white hover:text-primary-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+              className="flex items-center gap-2 rounded-md border border-secondary-200 bg-white px-3 py-2 text-sm font-medium text-secondary-700 transition-colors hover:text-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 lg:hidden"
             >
-              <Bars3Icon className="w-4 h-4" aria-hidden="true" />
+              <Bars3Icon className="h-4 w-4" />
               <span>Danh mục</span>
             </button>
 
-            {/* ── Desktop: Tất cả danh mục trigger ── */}
-            {/*
-             * No longer `relative` — the dropdown is now positioned relative to the
-             * container above, not this wrapper. Hover handlers remain here and on
-             * the panel; the 180ms close delay bridges any gap between them.
-             */}
             <div
-              className="hidden lg:block shrink-0"
+              className="hidden shrink-0 lg:block"
               onMouseEnter={openMega}
               onMouseLeave={closeMegaDelayed}
             >
@@ -109,82 +168,67 @@ export function Navbar() {
                 type="button"
                 aria-haspopup="true"
                 aria-expanded={megaOpen}
-                onClick={() => setMegaOpen((v) => !v)}
+                onClick={() => setMegaOpen((value) => !value)}
                 className={[
-                  "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md border bg-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400",
+                  "flex items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400",
                   megaOpen
                     ? "border-primary-300 text-primary-600"
                     : "border-secondary-200 text-secondary-700 hover:text-primary-600",
                 ].join(" ")}
               >
-                <Bars3Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <Bars3Icon className="h-4 w-4 shrink-0" />
                 Danh mục
                 <ChevronDownIcon
                   className={[
-                    "w-3.5 h-3.5 shrink-0 transition-transform duration-150",
+                    "h-3.5 w-3.5 shrink-0 transition-transform duration-150",
                     megaOpen ? "rotate-180" : "",
                   ].join(" ")}
-                  aria-hidden="true"
                 />
               </button>
             </div>
 
-            {/* Vertical separator */}
             <div
-              className="hidden lg:block mx-4 h-5 w-px bg-secondary-200 shrink-0"
+              className="mx-4 hidden h-5 w-px shrink-0 bg-secondary-200 lg:block"
               aria-hidden="true"
             />
 
-            {/* ── Desktop: Quick-access links ── */}
-            <div className="hidden lg:flex flex-1 items-center gap-6">
-              {NAV_LINKS.map((link) => {
-                const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    aria-current={isActive ? "page" : undefined}
-                    className={[
-                      "relative flex items-center gap-1 text-sm font-medium tracking-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:rounded-sm",
-                      isActive
-                        ? "text-primary-600 after:absolute after:inset-x-0 after:-bottom-[1px] after:h-0.5 after:bg-primary-600"
-                        : link.highlight
-                          ? "text-primary-600 hover:text-primary-700"
-                          : "text-secondary-600 hover:text-primary-600",
-                    ].join(" ")}
-                  >
-                    {link.highlight && (
-                      <TagIcon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-                    )}
-                    {link.label}
-                    {link.badge && (
-                      <span className="ml-0.5 inline-flex items-center rounded bg-error-500 px-1 py-0.5 text-[9px] font-bold uppercase leading-none text-white">
-                        {link.badge}
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
+            <div
+              ref={quickLinksViewportRef}
+              className="hidden min-w-0 flex-1 overflow-hidden lg:block"
+            >
+              <div
+                className="group relative overflow-hidden"
+                aria-label="Liên kết nhanh"
+              >
+                <div
+                  ref={quickLinksTrackRef}
+                  className={[
+                    "flex items-center gap-6 whitespace-nowrap",
+                    shouldMarquee
+                      ? "min-w-max group-hover:[animation-play-state:paused]"
+                      : "w-full flex-wrap",
+                  ].join(" ")}
+                  style={shouldMarquee ? {
+                    animation: `navbar-marquee ${navMarqueeDuration}s linear infinite`,
+                  } : undefined}
+                >
+                  {navLinks.map((link) => renderNavLink(link))}
+                  {shouldMarquee && navLinks.length > 0
+                    ? navLinks.map((link) => renderNavLink(link, true))
+                    : null}
+                </div>
+              </div>
             </div>
 
-            {/* Flash sale callout — far right */}
-            <div className="ml-auto hidden xl:flex items-center gap-1.5 shrink-0">
-              <SparklesIcon className="w-4 h-4 text-warning-600" aria-hidden="true" />
+            <div className="ml-auto hidden shrink-0 items-center gap-1.5 xl:flex">
+              <SparklesIcon className="h-4 w-4 text-warning-600" />
               <span className="text-xs font-semibold text-warning-600">
                 Flash Sale hôm nay
               </span>
             </div>
           </div>
 
-          {/* ── Mega menu panel — full container width ── */}
-          {/*
-           * Positioned absolute relative to the container div above (which is `relative`).
-           * `left-0 right-0` pins both edges to the container, making the panel exactly
-           * as wide as the navbar content area — no fixed pixel width needed.
-           * `pt-2` creates an invisible hover-bridge so the mouse can travel from the
-           * trigger button into the panel without triggering the close timer.
-           */}
-          {megaOpen && (
+          {megaOpen && sidebarCategories.length > 0 && (
             <div
               role="region"
               aria-label="Tất cả danh mục sản phẩm"
@@ -193,17 +237,15 @@ export function Navbar() {
               onMouseLeave={closeMegaDelayed}
             >
               <SidebarMegaMenu
-                categories={STORE_MEGA_MENU}
-                defaultActiveId="laptop-gaming"
-                className="w-full shadow-2xl border-secondary-200"
+                categories={sidebarCategories}
+                defaultActiveId={sidebarCategories[0]?.id}
+                className="w-full border-secondary-200 shadow-2xl"
               />
             </div>
           )}
-
         </div>
       </nav>
 
-      {/* ── Mobile drawer ── */}
       <Drawer
         isOpen={drawerOpen}
         onClose={() => setDrawerOpen(false)}
@@ -211,15 +253,47 @@ export function Navbar() {
         size="md"
         title="Danh mục sản phẩm"
       >
-        <div className="h-full overflow-hidden -mx-4 -mt-2">
+        <div className="-mx-4 -mt-2 flex h-full flex-col overflow-hidden">
           <SidebarMegaMenu
-            categories={STORE_MEGA_MENU}
-            defaultActiveId="laptop-gaming"
+            categories={sidebarCategories}
+            defaultActiveId={sidebarCategories[0]?.id}
             height={680}
-            className="rounded-none border-0 shadow-none w-full"
+            className="w-full rounded-none border-0 shadow-none"
           />
+          {mobileLinks.length > 0 && (
+            <div className="border-t border-secondary-200 px-4 py-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary-400">
+                Điều hướng nhanh
+              </p>
+              <div className="flex flex-col gap-2">
+                {mobileLinks.map((link) => (
+                  <Link
+                    key={link.id}
+                    href={link.url}
+                    target={link.target === "_blank" ? "_blank" : undefined}
+                    rel={link.target === "_blank" ? "noopener noreferrer" : undefined}
+                    className="text-sm font-medium text-secondary-700 transition-colors hover:text-primary-600"
+                    onClick={() => setDrawerOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </Drawer>
+
+      <style jsx>{`
+        @keyframes navbar-marquee {
+          from {
+            transform: translate3d(0, 0, 0);
+          }
+          to {
+            transform: translate3d(-50%, 0, 0);
+          }
+        }
+      `}</style>
     </>
   );
 }

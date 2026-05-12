@@ -6,49 +6,16 @@
  */
 
 import Link from "next/link";
-import {
-  ShieldCheckIcon,
-  TruckIcon,
-  ArrowPathIcon,
-  PhoneIcon,
-} from "@heroicons/react/24/solid";
 
 import { HeroBanner } from "@/src/components/home/HeroBanner";
 import { CategorySlider } from "@/src/components/home/CategorySlider";
+import { TrustBadges } from "@/src/components/home/TrustBadges";
 import type { ProductCardProps } from "@/src/components/product/ProductCard";
 import { ProductCarousel } from "@/src/components/product/ProductCarousel";
 import { ProductCardSkeleton } from "@/src/components/product/ProductCardSkeleton";
+import { getHomeContent } from "@/src/services/storefront-home.service";
 
-// ─── Trust badges ─────────────────────────────────────────────────────────────
-
-const TRUST_ITEMS = [
-  { icon: TruckIcon,        title: "Miễn phí giao hàng", desc: "Đơn từ 500.000₫ toàn quốc" },
-  { icon: ShieldCheckIcon,  title: "Bảo hành chính hãng", desc: "24 – 36 tháng theo hãng" },
-  { icon: ArrowPathIcon,    title: "Đổi trả 30 ngày",     desc: "Hoàn tiền 100% nếu lỗi" },
-  { icon: PhoneIcon,        title: "Hỗ trợ 7/7",          desc: "Hotline 1900 1234" },
-];
-
-function TrustBadges() {
-  return (
-    <section aria-label="Cam kết dịch vụ" className="max-w-[1400px] flex mx-auto items-center">
-      <div className="w-full 2xl:max-w-full px-4 sm:px-6 lg:px-8 2xl:px-0 py-2">
-        <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-secondary-100 flex intem-center">
-          {TRUST_ITEMS.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="flex items-center gap-3 px-4 py-4 sm:px-6 sm:py-5">
-              <div aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-600">
-                <Icon className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm font-semibold text-secondary-900 truncate">{title}</p>
-                <p className="hidden sm:block text-xs text-secondary-500 truncate">{desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+type HomeContent = Awaited<ReturnType<typeof getHomeContent>>;
 
 // ─── Mock datasets ─────────────────────────────────────────────────────────────
 // Prices are raw VND integers so ProductCard / PriceTag can format them.
@@ -905,12 +872,15 @@ function FlashSaleSection() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function HomePage() {
+export default async function HomePage() {
+  const homeContent: HomeContent = await getHomeContent();
+  const heroBanner = homeContent.banners.hero[0] ?? homeContent.banners.heroSlider[0] ?? null;
+
   return (
     <>
-      <HeroBanner />
-      <TrustBadges />
-      <CategorySlider />
+      <HeroBanner hero={heroBanner} heroSlides={homeContent.banners.heroSlider} smallPromos={homeContent.banners.smallPromo} />
+      <TrustBadges badges={homeContent.trustBadges} />
+      <CategorySlider items={homeContent.categoryShortcuts} />
       <FlashSaleSection />
       <ProductSection
         title="Laptop Gaming Mới Nhất"
@@ -950,3 +920,5 @@ export default function HomePage() {
     </>
   );
 }
+
+

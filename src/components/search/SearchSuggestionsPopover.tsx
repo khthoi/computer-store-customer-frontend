@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ClockIcon,
@@ -9,74 +9,37 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { Skeleton } from "@/src/components/ui/Skeleton";
-import {
-  SUGGESTION_PRODUCTS,
-  SUGGESTION_CATEGORIES,
-  type SuggestionProduct,
-  type SuggestionCategory,
-} from "@/src/app/(storefront)/search/_mock_data";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatVND(n: number): string {
-  return n.toLocaleString("vi-VN") + "₫";
-}
-
-function matchProducts(q: string): SuggestionProduct[] {
-  const lower = q.toLowerCase();
-  return SUGGESTION_PRODUCTS.filter((p) =>
-    p.name.toLowerCase().includes(lower)
-  ).slice(0, 4);
-}
-
-function matchCategories(q: string): SuggestionCategory[] {
-  const lower = q.toLowerCase();
-  return SUGGESTION_CATEGORIES.filter((c) =>
-    c.name.toLowerCase().includes(lower)
-  ).slice(0, 3);
-}
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import { getSearchSuggestions } from "@/src/services/storefront-layout.service";
+import type { SearchShortcutItem } from "@/src/types/storefront-layout.types";
 
 export interface SearchSuggestionsPopoverProps {
   query: string;
   isFocused: boolean;
-  /** Called when the user confirms a search query */
   onSubmit: (query: string) => void;
   onClose: () => void;
+  shortcutItems: SearchShortcutItem[];
 }
-
-// ─── Section header ───────────────────────────────────────────────────────────
 
 function SectionHeader({ label }: { label: string }) {
   return (
-    <p className="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-secondary-400">
+    <p className="px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-secondary-400">
       {label}
     </p>
   );
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
-/**
- * SearchSuggestionsPopover — absolute-positioned autocomplete panel anchored
- * below the SearchBar input. Managed by focus state from the parent.
- *
- * - When query is empty: shows recent search history.
- * - When query has input: debounces 300ms then shows product + category matches.
- * - All buttons use onMouseDown + e.preventDefault() so clicking them does not
- *   blur the input before the click registers.
- */
 export function SearchSuggestionsPopover({
   query,
   isFocused,
   onSubmit,
   onClose,
+  shortcutItems,
 }: SearchSuggestionsPopoverProps) {
   const router = useRouter();
-
-  // ── Search history (localStorage) ──────────────────────────────────────────
   const [history, setHistory] = useState<string[]>([]);
+  const [isDebouncing, setIsDebouncing] = useState(false);
+  const [productSuggestions, setProductSuggestions] = useState<Array<{ id: string; name: string; slug: string }>>([]);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!isFocused || typeof window === "undefined") return;
@@ -88,8 +51,42 @@ export function SearchSuggestionsPopover({
     }
   }, [isFocused]);
 
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setIsDebouncing(false);
+      setProductSuggestions([]);
+      return;
+    }
+
+    setIsDebouncing(true);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        setProductSuggestions(await getSearchSuggestions(trimmed));
+      } catch {
+        setProductSuggestions([]);
+      } finally {
+        setIsDebouncing(false);
+      }
+    }, 300);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query]);
+
+  const matchedShortcuts = useMemo(() => {
+    const trimmed = query.trim().toLowerCase();
+    if (!trimmed) return shortcutItems.slice(0, 6);
+    return shortcutItems
+      .filter((item) => item.label.toLowerCase().includes(trimmed))
+      .slice(0, 5);
+  }, [query, shortcutItems]);
+
   function removeHistoryEntry(entry: string) {
-    const next = history.filter((h) => h !== entry);
+    const next = history.filter((item) => item !== entry);
     setHistory(next);
     try {
       localStorage.setItem("search_history", JSON.stringify(next));
@@ -103,62 +100,11 @@ export function SearchSuggestionsPopover({
     } catch {}
   }
 
-  // ── Debounced suggestions ───────────────────────────────────────────────────
-  const [isDebouncing, setIsDebouncing] = useState(false);
-  const [suggestedProducts, setSuggestedProducts] = useState<SuggestionProduct[]>([]);
-  const [suggestedCategories, setSuggestedCategories] = useState<SuggestionCategory[]>([]);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (!query.trim()) {
-      setIsDebouncing(false);
-      setSuggestedProducts([]);
-      setSuggestedCategories([]);
-      return;
-    }
-
-    setIsDebouncing(true);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    debounceRef.current = setTimeout(() => {
-      setSuggestedProducts(matchProducts(query));
-      setSuggestedCategories(matchCategories(query));
-      setIsDebouncing(false);
-    }, 300);
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [query]);
-
-  // ── Visibility ──────────────────────────────────────────────────────────────
   const showHistory = isFocused && query.length === 0 && history.length > 0;
-  const showSuggestions = isFocused && query.length >= 1;
+  const showSuggestions = isFocused && (query.length > 0 || matchedShortcuts.length > 0);
   const isOpen = showHistory || showSuggestions;
 
   if (!isOpen) return null;
-
-  // ── Handlers ────────────────────────────────────────────────────────────────
-
-  function handleHistoryClick(entry: string) {
-    onSubmit(entry);
-  }
-
-  function handleProductClick(href: string) {
-    onClose();
-    router.push(href);
-  }
-
-  function handleCategoryClick(href: string) {
-    onClose();
-    router.push(href);
-  }
-
-  function handleCTAClick() {
-    onSubmit(query);
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────────
 
   return (
     <div
@@ -166,7 +112,6 @@ export function SearchSuggestionsPopover({
       aria-label="Gợi ý tìm kiếm"
       className="absolute left-0 right-0 top-full z-[200] mt-1 overflow-hidden rounded-xl border border-secondary-200 bg-white shadow-xl"
     >
-      {/* ── Recent searches (shown only when query is empty) ───────────── */}
       {showHistory && (
         <div>
           <SectionHeader label="Tìm kiếm gần đây" />
@@ -177,149 +122,127 @@ export function SearchSuggestionsPopover({
                   type="button"
                   role="option"
                   aria-selected={false}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => handleHistoryClick(entry)}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-secondary-700 hover:bg-secondary-50 focus-visible:bg-secondary-50 focus-visible:outline-none"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => onSubmit(entry)}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-secondary-700 hover:bg-secondary-50"
                 >
-                  <ClockIcon className="h-4 w-4 shrink-0 text-secondary-400" aria-hidden="true" />
+                  <ClockIcon className="h-4 w-4 shrink-0 text-secondary-400" />
                   <span className="flex-1 truncate">{entry}</span>
                   <span
                     role="button"
                     aria-label={`Xóa "${entry}" khỏi lịch sử`}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={(e) => {
-                      e.stopPropagation();
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.stopPropagation();
                       removeHistoryEntry(entry);
                     }}
-                    className="ml-auto shrink-0 rounded p-0.5 text-secondary-400 hover:text-secondary-700"
+                    className="ml-auto rounded p-0.5 text-secondary-400 hover:text-secondary-700"
                   >
-                    <XMarkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                    <XMarkIcon className="h-3.5 w-3.5" />
                   </span>
                 </button>
               </li>
             ))}
           </ul>
-          {history.length > 0 && (
-            <div className="px-4 py-2 border-t border-secondary-100">
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={clearAllHistory}
-                className="text-xs text-secondary-400 hover:text-secondary-600 transition-colors"
-              >
-                Xóa lịch sử
-              </button>
-            </div>
-          )}
+          <div className="border-t border-secondary-100 px-4 py-2">
+            <button
+              type="button"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={clearAllHistory}
+              className="text-xs text-secondary-400 transition-colors hover:text-secondary-600"
+            >
+              Xóa lịch sử
+            </button>
+          </div>
         </div>
       )}
 
-      {/* ── Query-based suggestions ────────────────────────────────────── */}
       {showSuggestions && (
         <>
-          {/* Products */}
-          <div className={showHistory ? "border-t border-secondary-100" : ""}>
+          {matchedShortcuts.length > 0 && (
+            <div className={showHistory ? "border-t border-secondary-100" : ""}>
+              <SectionHeader label={query.trim() ? "Danh mục phù hợp" : "Danh mục nổi bật"} />
+              <ul>
+                {matchedShortcuts.map((item) => (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={false}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        onClose();
+                        router.push(item.url);
+                      }}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-secondary-700 hover:bg-secondary-50"
+                    >
+                      <FolderIcon className="h-4 w-4 shrink-0 text-secondary-400" />
+                      <span className="truncate">{item.label}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="border-t border-secondary-100">
             <SectionHeader label="Sản phẩm" />
             {isDebouncing ? (
               <div className="space-y-1 px-4 pb-2">
-                {[0, 1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-3 py-1.5">
-                    <Skeleton className="h-10 w-10 shrink-0 rounded" />
-                    <div className="flex-1 space-y-1.5">
-                      <Skeleton className="h-3.5 w-3/4 rounded" />
-                      <Skeleton className="h-3 w-1/3 rounded" />
-                    </div>
+                {[0, 1, 2, 3].map((index) => (
+                  <div key={index} className="flex items-center gap-3 py-1.5">
+                    <Skeleton className="h-4 w-4 shrink-0 rounded" />
+                    <Skeleton className="h-3.5 w-3/4 rounded" />
                   </div>
                 ))}
               </div>
-            ) : suggestedProducts.length > 0 ? (
+            ) : productSuggestions.length > 0 ? (
               <ul>
-                {suggestedProducts.map((product) => (
+                {productSuggestions.map((product) => (
                   <li key={product.id}>
                     <button
                       type="button"
                       role="option"
                       aria-selected={false}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => handleProductClick(product.href)}
-                      className="flex w-full items-center gap-3 px-4 py-2 text-left hover:bg-secondary-50 focus-visible:bg-secondary-50 focus-visible:outline-none"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        onClose();
+                        router.push(`/search?q=${encodeURIComponent(product.name)}`);
+                      }}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-secondary-700 hover:bg-secondary-50"
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={product.thumbnail}
-                        alt=""
-                        className="h-10 w-10 shrink-0 rounded object-cover bg-secondary-50"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="line-clamp-1 text-sm font-medium text-secondary-800">
-                          {product.name}
-                        </p>
-                        <p className="text-xs font-semibold text-primary-600">
-                          {formatVND(product.price)}
-                        </p>
-                      </div>
+                      <MagnifyingGlassIcon className="h-4 w-4 shrink-0 text-secondary-400" />
+                      <span className="truncate">{product.name}</span>
                     </button>
                   </li>
                 ))}
               </ul>
-            ) : (
+            ) : query.trim().length >= 2 ? (
               <p className="px-4 py-3 text-sm text-secondary-400">
                 Không tìm thấy sản phẩm phù hợp.
+              </p>
+            ) : (
+              <p className="px-4 py-3 text-sm text-secondary-400">
+                Nhập ít nhất 2 ký tự để xem gợi ý sản phẩm.
               </p>
             )}
           </div>
 
-          {/* Categories */}
-          {(isDebouncing || suggestedCategories.length > 0) && (
+          {query.trim().length > 0 && (
             <div className="border-t border-secondary-100">
-              <SectionHeader label="Danh mục" />
-              {isDebouncing ? (
-                <div className="space-y-1 px-4 pb-2">
-                  {[0, 1].map((i) => (
-                    <div key={i} className="flex items-center gap-3 py-1.5">
-                      <Skeleton className="h-4 w-4 shrink-0 rounded" />
-                      <Skeleton className="h-3.5 w-1/2 rounded" />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <ul>
-                  {suggestedCategories.map((cat) => (
-                    <li key={cat.id}>
-                      <button
-                        type="button"
-                        role="option"
-                        aria-selected={false}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => handleCategoryClick(cat.href)}
-                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-secondary-700 hover:bg-secondary-50 focus-visible:bg-secondary-50 focus-visible:outline-none"
-                      >
-                        <FolderIcon className="h-4 w-4 shrink-0 text-secondary-400" aria-hidden="true" />
-                        <span className="truncate">{cat.name}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <button
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => onSubmit(query)}
+                className="flex w-full items-center gap-2 px-4 py-3 text-sm font-medium text-primary-600 transition-colors hover:bg-primary-50"
+              >
+                <MagnifyingGlassIcon className="h-4 w-4 shrink-0" />
+                <span>
+                  Xem tất cả kết quả cho “<span className="font-semibold">{query}</span>”
+                </span>
+              </button>
             </div>
           )}
-
-          {/* Footer CTA */}
-          <div className="border-t border-secondary-100">
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={handleCTAClick}
-              className="flex w-full items-center gap-2 px-4 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50 transition-colors focus-visible:bg-primary-50 focus-visible:outline-none"
-            >
-              <MagnifyingGlassIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span>
-                Xem tất cả kết quả cho &ldquo;
-                <span className="font-semibold">{query}</span>
-                &rdquo;
-              </span>
-            </button>
-          </div>
         </>
       )}
     </div>

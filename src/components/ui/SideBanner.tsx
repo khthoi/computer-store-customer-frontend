@@ -10,6 +10,8 @@ export interface SideBannerProps {
   alt: string;
   /** Destination URL when clicked */
   href?: string;
+  /** Link target */
+  target?: "_self" | "_blank";
   /** px width of the banner image — default 160 */
   width?: number;
   /** px height of the banner image — default 480 */
@@ -37,12 +39,15 @@ export function SideBanner({
   image,
   alt,
   href = "/",
+  target = "_self",
   width = 200,
   height = 720,
 }: SideBannerProps) {
   return (
     <Link
       href={href}
+      target={target}
+      rel={target === "_blank" ? "noopener noreferrer" : undefined}
       aria-label={alt}
       className="block overflow-hidden rounded-sm shadow-lg transition-transform duration-300 ease-out hover:scale-[1.03]"
       style={{ width }}

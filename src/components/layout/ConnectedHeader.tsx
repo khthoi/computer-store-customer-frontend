@@ -12,8 +12,9 @@
 import { useAuth } from "@/src/store/auth.store";
 import { useCart } from "@/src/store/cart.store";
 import { Header } from "./Header";
+import type { StorefrontLayoutData } from "@/src/types/storefront-layout.types";
 
-export function ConnectedHeader() {
+export function ConnectedHeader({ layoutData }: { layoutData: StorefrontLayoutData }) {
   const { state: authState, logout } = useAuth();
   const { state: cartState } = useCart();
 
@@ -28,6 +29,13 @@ export function ConnectedHeader() {
       compareCount={0}
       user={user}
       onLogout={logout}
+      topLinks={layoutData.headerTopMenu}
+      navLinks={layoutData.headerMainMenu}
+      mobileLinks={layoutData.mobileMainMenu}
+      categories={layoutData.categoryTree}
+      searchShortcuts={layoutData.searchShortcuts}
+      publicSettings={layoutData.publicSettings}
+      socialLinks={layoutData.footerConfig.socialLinks}
     />
   );
 }

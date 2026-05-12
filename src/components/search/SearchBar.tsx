@@ -4,6 +4,7 @@ import { type FormEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { SearchSuggestionsPopover } from "./SearchSuggestionsPopover";
+import type { SearchShortcutItem } from "@/src/types/storefront-layout.types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,6 +25,7 @@ export interface SearchBarProps {
    * Lets SearchResultsPageInner navigate without full-page reload.
    */
   onSearch?: (query: string) => void;
+  shortcutItems?: SearchShortcutItem[];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -59,6 +61,7 @@ export function SearchBar({
   size = "default",
   initialValue = "",
   onSearch,
+  shortcutItems = [],
 }: SearchBarProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -168,6 +171,7 @@ export function SearchBar({
         isFocused={isFocused}
         onSubmit={submit}
         onClose={() => setIsFocused(false)}
+        shortcutItems={shortcutItems}
       />
     </div>
   );

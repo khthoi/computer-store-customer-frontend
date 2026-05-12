@@ -3,6 +3,20 @@
 
 ---
 
+---
+
+## BẮT BUỘC KHI IMPLEMENT
+
+- Không được phép xóa toàn bộ file rồi viết lại.
+- Không được phép xóa toàn bộ nội dung file rồi viết lại.
+- Không được phép implement lại toàn bộ file nếu chỉ có một phần sai cần sửa.
+- Chỉ sửa đúng phần bị sai hoặc phần cần bổ sung, theo hướng chỉnh sửa tối thiểu và chính xác.
+- Mọi nội dung hiển thị cho người dùng phải dùng tiếng Việt có dấu.
+- Comments, tên biến, tên hàm, tên kiểu dữ liệu, và code phải dùng tiếng Anh.
+- Cấm sử dụng tiếng Việt không dấu trong nội dung hiển thị cho người dùng.
+
+---
+
 ## 1. Project Overview
 
 Repository  : computer-store-customer-frontend

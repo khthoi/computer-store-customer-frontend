@@ -88,7 +88,6 @@ export function MegaMenu({ triggers, className = "" }: MegaMenuProps) {
   // Calculate dropdown positions
   useEffect(() => {
     if (activeIndex === null) {
-      setPositions(new Map());
       return;
     }
 
@@ -331,12 +330,14 @@ export interface SidebarMenuLink {
 }
 
 export interface SidebarMenuSection {
+  id: string;
   heading: string;
   /** Optional badge on the heading, e.g. "Hot" */
   headingBadge?: string;
   /** Makes the heading itself a clickable link */
   headingHref?: string;
   items: SidebarMenuLink[];
+  hiddenItems?: SidebarMenuLink[];
 }
 
 export interface SidebarMenuBrand {
@@ -388,7 +389,7 @@ function BadgeChip({ text }: { text: string }) {
   return (
     <span
       className={[
-        "ml-1.5 inline-flex items-center rounded px-1 py-0.5 text-[10px] font-bold uppercase leading-none",
+        "-translate-y-1 ml-1.5 inline-flex items-center self-start rounded px-1 py-0.5 text-[10px] font-bold uppercase leading-none",
         isHot
           ? "bg-red-500 text-white"
           : "bg-primary-500 text-white",
@@ -487,7 +488,20 @@ function FlyoutItem({ item }: { item: SidebarMenuLink }) {
   );
 }
 
-function SectionBlock({ section }: { section: SidebarMenuSection }) {
+function SectionBlock({
+  section,
+  expanded,
+  onToggle,
+}: {
+  section: SidebarMenuSection;
+  expanded: boolean;
+  onToggle: (sectionId: string) => void;
+}) {
+  const visibleItems = expanded
+    ? [...section.items, ...(section.hiddenItems ?? [])]
+    : section.items;
+  const hiddenCount = section.hiddenItems?.length ?? 0;
+
   return (
     <div className="mb-3">
       {/* Section heading */}
@@ -495,29 +509,43 @@ function SectionBlock({ section }: { section: SidebarMenuSection }) {
         {section.headingHref ? (
           <a
             href={section.headingHref}
-            className="text-xs font-semibold text-primary-700 hover:underline transition-colors"
+            className="inline-flex items-center gap-1 border-b border-transparent pb-0.5 text-xs font-semibold text-primary-700 transition-colors hover:border-primary-600"
           >
-            {section.heading}
+            <span>{section.heading}</span>
+            {section.headingBadge && <BadgeChip text={section.headingBadge} />}
+            <ChevronRightIcon className="ml-0.5 h-3.5 w-3.5 text-primary-500" aria-hidden="true" />
           </a>
         ) : (
-          <span className="text-xs font-semibold text-primary-700">
-            {section.heading}
-          </span>
-        )}
-        {section.headingBadge && <BadgeChip text={section.headingBadge} />}
-        {section.headingHref && (
-          <ChevronRightIcon className="w-3.5 h-3.5 text-primary-500 ml-0.5" aria-hidden="true" />
+          <>
+            <span className="text-xs font-semibold text-primary-700">
+              {section.heading}
+            </span>
+            {section.headingBadge && <BadgeChip text={section.headingBadge} />}
+          </>
         )}
       </div>
 
       {/* Items */}
       <ul role="list" className="flex flex-col gap-0.5">
-        {section.items.map((item) => (
+        {visibleItems.map((item) => (
           <li key={item.label}>
             <FlyoutItem item={item} />
           </li>
         ))}
       </ul>
+
+      {hiddenCount > 0 && (
+        <div className="mt-1.5">
+          <button
+            type="button"
+            onClick={() => onToggle(section.id)}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 transition-colors hover:text-primary-700 hover:underline"
+          >
+            <span>{expanded ? "Thu gọn" : `Xem thêm ${hiddenCount} mục`}</span>
+            <ChevronRightIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -545,18 +573,25 @@ export function SidebarMegaMenu({
 }: SidebarMegaMenuProps) {
   const fallbackId = defaultActiveId ?? categories[0]?.id ?? null;
   const [activeId, setActiveId] = useState<string | null>(fallbackId);
+  const [expandedSectionIds, setExpandedSectionIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const switchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeCategory = categories.find((c) => c.id === activeId) ?? null;
   const panel = activeCategory?.panel ?? null;
+  const desktopMaxHeight = "min(720px, calc(100vh - 140px))";
 
   function handleCategoryEnter(id: string) {
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
     // Short delay prevents accidental switches during diagonal mouse movement
     // from sidebar → panel. 50ms is imperceptible but filters stray hover events.
     if (switchTimerRef.current) clearTimeout(switchTimerRef.current);
-    switchTimerRef.current = setTimeout(() => setActiveId(id), 50);
+    switchTimerRef.current = setTimeout(() => {
+      setActiveId(id);
+      setExpandedSectionIds(new Set());
+    }, 50);
   }
 
   function handleContainerLeave() {
@@ -577,6 +612,18 @@ export function SidebarMegaMenu({
     };
   }, []);
 
+  function toggleSection(sectionId: string) {
+    setExpandedSectionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sectionId)) {
+        next.delete(sectionId);
+      } else {
+        next.add(sectionId);
+      }
+      return next;
+    });
+  }
+
   // Panel layout: content columns + optional brands column
   const contentCols = panel?.columns ?? [];
   const brands = panel?.brands ?? [];
@@ -590,14 +637,17 @@ export function SidebarMegaMenu({
       ]
         .filter(Boolean)
         .join(" ")}
-      style={{ height }}
+      style={{
+        height,
+        maxHeight: height ? undefined : desktopMaxHeight,
+      }}
       onMouseLeave={handleContainerLeave}
       onMouseEnter={handleContainerEnter}
     >
       {/* ── Left sidebar ── */}
       <nav
         aria-label="Product categories"
-        className="w-56 shrink-0 overflow-y-auto border-r border-secondary-100 bg-secondary-50"
+        className="min-h-0 w-56 shrink-0 overflow-y-auto border-r border-secondary-100 bg-secondary-50"
       >
         <ul role="list" className="flex flex-col">
           {categories.map((cat) => {
@@ -660,11 +710,11 @@ export function SidebarMegaMenu({
       </nav>
 
       {/* ── Right panel ── */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {panel ? (
-          <div className="p-5 h-full">
+          <div className="h-full p-5">
             <div
-              className="grid gap-x-6 h-full"
+              className="grid h-full gap-x-6 gap-y-2"
               style={{
                 gridTemplateColumns: `repeat(${Math.max(1, totalCols)}, minmax(0, 1fr))`,
               }}
@@ -673,7 +723,12 @@ export function SidebarMegaMenu({
               {contentCols.map((sections, colIdx) => (
                 <div key={colIdx} className="min-w-0">
                   {sections.map((section) => (
-                    <SectionBlock key={section.heading} section={section} />
+                    <SectionBlock
+                      key={section.id}
+                      section={section}
+                      expanded={expandedSectionIds.has(section.id)}
+                      onToggle={toggleSection}
+                    />
                   ))}
                 </div>
               ))}

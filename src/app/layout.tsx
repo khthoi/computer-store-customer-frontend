@@ -6,6 +6,7 @@ import { MainContent } from "@/src/components/layout/MainContent";
 import { SideBannersConditional } from "@/src/components/layout/SideBannersConditional";
 import { ConnectedHeader } from "@/src/components/layout/ConnectedHeader";
 import { Providers } from "./providers";
+import { getStorefrontLayoutData } from "@/src/services/storefront-layout.service";
 
 /**
  * CUSTOMER STOREFRONT — Root Layout
@@ -43,29 +44,31 @@ export const metadata: Metadata = {
     "Mua CPU, GPU, RAM, SSD, laptop gaming và linh kiện máy tính chính hãng. Giao hàng toàn quốc, bảo hành 24 tháng.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const layoutData = await getStorefrontLayoutData();
+
   return (
     <html lang="vi" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="antialiased bg-secondary-50">
         <Providers>
           {/* ConnectedHeader reads from AuthProvider + CartProvider context */}
-          <ConnectedHeader />
+          <ConnectedHeader layoutData={layoutData} />
 
           {/*
            * 3-column grid at 2xl+ (≥ 1536 px):
            *   [240px side banner] [1fr main content] [240px side banner]
            */}
           <div className="2xl:grid 2xl:grid-cols-[120px_1fr_120px]">
-            <SideBannersConditional />
+            <SideBannersConditional banners={layoutData.sideBanners} />
 
             <MainContent>{children}</MainContent>
           </div>
 
-          <Footer />
+          <Footer config={layoutData.footerConfig} menus={layoutData.footerMenus} />
         </Providers>
       </body>
     </html>

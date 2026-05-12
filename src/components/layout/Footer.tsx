@@ -1,27 +1,49 @@
 import Link from "next/link";
-import { FaFacebookF, FaYoutube, FaTiktok } from "react-icons/fa";
-
-// ─── Social icon SVGs ─────────────────────────────────────────────────────────
+import { FaFacebookF, FaInstagram, FaLinkedinIn, FaTiktok, FaXTwitter, FaYoutube } from "react-icons/fa6";
+import type { FooterConfigData, StorefrontMenuItem } from "@/src/types/storefront-layout.types";
+import type { ReactNode } from "react";
 
 function FacebookIcon({ className }: { className?: string }) {
-  return (
-    <FaFacebookF className={className} />
-  );
+  return <FaFacebookF className={className} />;
 }
 
 function YouTubeIcon({ className }: { className?: string }) {
-  return (
-    <FaYoutube className={className} />
-  );
+  return <FaYoutube className={className} />;
 }
 
 function TikTokIcon({ className }: { className?: string }) {
-  return (
-    <FaTiktok className={className} />
-  );
+  return <FaTiktok className={className} />;
 }
 
-// ─── Payment badge ─────────────────────────────────────────────────────────────
+function InstagramIcon({ className }: { className?: string }) {
+  return <FaInstagram className={className} />;
+}
+
+function TwitterIcon({ className }: { className?: string }) {
+  return <FaXTwitter className={className} />;
+}
+
+function LinkedinIcon({ className }: { className?: string }) {
+  return <FaLinkedinIn className={className} />;
+}
+
+const SOCIAL_ICON_MAP = {
+  facebook: FacebookIcon,
+  youtube: YouTubeIcon,
+  instagram: InstagramIcon,
+  tiktok: TikTokIcon,
+  twitter: TwitterIcon,
+  linkedin: LinkedinIcon,
+  zalo: FacebookIcon,
+} as const;
+
+const PAYMENT_METHODS = [
+  { label: "VISA", color: "text-blue-400" },
+  { label: "Mastercard", color: "text-orange-400" },
+  { label: "MoMo", color: "text-pink-400" },
+  { label: "VNPay", color: "text-blue-300" },
+  { label: "COD", color: "text-green-400" },
+];
 
 function PaymentBadge({ label, color }: { label: string; color: string }) {
   return (
@@ -37,52 +59,7 @@ function PaymentBadge({ label, color }: { label: string; color: string }) {
   );
 }
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
-
-const SUPPORT_LINKS = [
-  { label: "Hướng dẫn mua hàng",   href: "/huong-dan-mua-hang" },
-  { label: "Chính sách bảo hành",   href: "/chinh-sach-bao-hanh" },
-  { label: "Chính sách đổi trả",    href: "/chinh-sach-doi-tra" },
-  { label: "Câu hỏi thường gặp",    href: "/faq" },
-  { label: "Hỗ trợ kỹ thuật",       href: "/support/technical" },
-];
-
-const CATEGORY_LINKS = [
-  { label: "Laptop",      href: "/products/laptop" },
-  { label: "PC Gaming",   href: "/products/pc-gaming" },
-  { label: "CPU",         href: "/products/cpu" },
-  { label: "GPU",         href: "/products/gpu" },
-  { label: "RAM",         href: "/products/ram" },
-  { label: "SSD",         href: "/products/ssd" },
-  { label: "Màn Hình",    href: "/products/man-hinh" },
-  { label: "Bàn Phím",    href: "/products/ban-phim" },
-  { label: "Chuột",       href: "/products/chuot" },
-  { label: "Tai Nghe",    href: "/products/tai-nghe" },
-];
-
-const COMPANY_LINKS = [
-  { label: "Về chúng tôi",    href: "/about" },
-  { label: "Tuyển dụng",      href: "/careers" },
-  { label: "Liên hệ",         href: "/contact" },
-];
-
-const SOCIAL_LINKS = [
-  { label: "Facebook",  href: "https://facebook.com", Icon: FacebookIcon,  hoverClass: "hover:text-blue-400 hover:border-blue-400/40" },
-  { label: "YouTube",   href: "https://youtube.com",  Icon: YouTubeIcon,   hoverClass: "hover:text-red-400 hover:border-red-400/40" },
-  { label: "TikTok",    href: "https://tiktok.com",   Icon: TikTokIcon,    hoverClass: "hover:text-white hover:border-white/40" },
-];
-
-const PAYMENT_METHODS = [
-  { label: "VISA",        color: "text-blue-400" },
-  { label: "Mastercard",  color: "text-orange-400" },
-  { label: "MoMo",        color: "text-pink-400" },
-  { label: "VNPay",       color: "text-blue-300" },
-  { label: "COD",         color: "text-green-400" },
-];
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function FooterHeading({ children }: { children: React.ReactNode }) {
+function FooterHeading({ children }: { children: ReactNode }) {
   return (
     <h3 className="mb-4 text-xs font-semibold uppercase tracking-wide text-white/90">
       {children}
@@ -90,14 +67,14 @@ function FooterHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
-function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
+function FooterLink({ href, target, children }: { href: string; target?: "_self" | "_blank"; children: ReactNode }) {
   const isExternal = href.startsWith("http");
   return (
     <li>
       <Link
         href={href}
-        target={isExternal ? "_blank" : undefined}
-        rel={isExternal ? "noopener noreferrer" : undefined}
+        target={target === "_blank" || isExternal ? "_blank" : undefined}
+        rel={target === "_blank" || isExternal ? "noopener noreferrer" : undefined}
         className="text-sm text-white/60 transition-colors hover:text-white hover:underline underline-offset-2 decoration-white/30"
       >
         {children}
@@ -106,120 +83,140 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
   );
 }
 
-// ─── Footer ───────────────────────────────────────────────────────────────────
+function FooterMenuList({ items }: { items: StorefrontMenuItem[] }) {
+  return (
+    <ul className="flex flex-col gap-2.5">
+      {items.map((link) => (
+        <FooterLink key={link.id} href={link.url} target={link.target}>
+          {link.label}
+        </FooterLink>
+      ))}
+    </ul>
+  );
+}
 
-export function Footer() {
+export interface FooterProps {
+  config: FooterConfigData;
+  menus: Record<"footer_column_1" | "footer_column_2" | "footer_column_3", StorefrontMenuItem[]>;
+}
+
+export function Footer({ config, menus }: FooterProps) {
+  const [columnOne, columnTwo, columnThree] = config.linkColumns;
+  const columnOneItems = columnOne ? menus[columnOne.location] : [];
+  const columnTwoItems = columnTwo ? menus[columnTwo.location] : [];
+  const columnThreeItems = columnThree ? menus[columnThree.location] : [];
+
   return (
     <footer className="bg-secondary-900 text-secondary-400">
-
-      {/* ── Main footer grid ── */}
-      <div className="mx-auto max-w-[1450px] flex px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 gap-y-10 gap-x-10 sm:grid-cols-2 lg:grid-cols-4">
-
-          {/* ── Column 1: Store info ── */}
+      <div className="mx-auto flex max-w-[1450px] px-4 py-12 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            {/* Logo */}
             <Link href="/" className="mb-5 flex items-center gap-2.5 focus-visible:outline-none">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600 text-white text-sm font-extrabold shadow-md">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600 text-sm font-extrabold text-white shadow-md">
                 PC
               </div>
               <span className="text-base font-extrabold text-white">
-                Tech<span className="text-primary-400">Store</span>
+                {config.brand.storeName}
               </span>
             </Link>
 
             <p className="mb-5 text-sm leading-relaxed text-white/60">
-              Cửa hàng linh kiện máy tính & laptop chính hãng. Đa dạng sản phẩm từ CPU,
-              GPU, RAM, SSD đến laptop gaming và phụ kiện công nghệ.
+              {config.brand.description || "Cửa hàng linh kiện máy tính và laptop chính hãng."}
             </p>
 
-            {/* Hotline card */}
-            <div className="mb-5 rounded-lg bg-white/5 p-3 border border-white/10">
-              <p className="text-xs font-semibold uppercase tracking-wide text-white/40 mb-1">
-                Hotline hỗ trợ
-              </p>
-              <a
-                href="tel:19001234"
-                className="block text-base font-bold text-primary-400 hover:text-primary-300 transition-colors"
-              >
-                1900 1234
-              </a>
-              <p className="text-xs text-white/50 mt-0.5">
-                Thứ 2 – CN, 08:00 – 21:00
-              </p>
-            </div>
+            {(config.contact.phone || config.contact.supportHours) && (
+              <div className="mb-5 rounded-lg border border-white/10 bg-white/5 p-3">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-white/40">
+                  Hotline hỗ trợ
+                </p>
+                {config.contact.phone && (
+                  <a
+                    href={`tel:${config.contact.phone}`}
+                    className="block text-base font-bold text-primary-400 transition-colors hover:text-primary-300"
+                  >
+                    {config.contact.phone}
+                  </a>
+                )}
+                {config.contact.supportHours && (
+                  <p className="mt-0.5 text-xs text-white/50">
+                    {config.contact.supportHours}
+                  </p>
+                )}
+              </div>
+            )}
 
-            {/* Company links */}
-            <FooterHeading>Công ty</FooterHeading>
-            <ul className="flex flex-col gap-2">
-              {COMPANY_LINKS.map((link) => (
-                <FooterLink key={link.href} href={link.href}>{link.label}</FooterLink>
-              ))}
-            </ul>
+            {columnOne && (
+              <>
+                <FooterHeading>{columnOne.title}</FooterHeading>
+                <FooterMenuList items={columnOneItems} />
+              </>
+            )}
           </div>
 
-          {/* ── Column 2: Customer support ── */}
           <div>
-            <FooterHeading>Hỗ trợ khách hàng</FooterHeading>
-            <ul className="flex flex-col gap-2.5">
-              {SUPPORT_LINKS.map((link) => (
-                <FooterLink key={link.href} href={link.href}>{link.label}</FooterLink>
-              ))}
-            </ul>
+            {columnTwo && (
+              <>
+                <FooterHeading>{columnTwo.title}</FooterHeading>
+                <FooterMenuList items={columnTwoItems} />
+              </>
+            )}
           </div>
 
-          {/* ── Column 3: Product categories ── */}
           <div>
-            <FooterHeading>Danh mục sản phẩm</FooterHeading>
-            <ul className="grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-1">
-              {CATEGORY_LINKS.map((link) => (
-                <FooterLink key={link.href} href={link.href}>{link.label}</FooterLink>
-              ))}
-            </ul>
+            {columnThree && (
+              <>
+                <FooterHeading>{columnThree.title}</FooterHeading>
+                <FooterMenuList items={columnThreeItems} />
+              </>
+            )}
           </div>
 
-          {/* ── Column 4: Contact & social ── */}
           <div>
             <FooterHeading>Liên hệ</FooterHeading>
 
-            <address className="not-italic flex flex-col gap-3.5 text-sm mb-6">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 mb-1">Địa chỉ</p>
-                <p className="text-white/60">123 Nguyễn Văn Linh, Q.7</p>
-                <p className="text-white/60">TP. Hồ Chí Minh</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 mb-1">Email</p>
-                <a
-                  href="mailto:support@techstore.vn"
-                  className="text-white/60 hover:text-white transition-colors"
-                >
-                  support@techstore.vn
-                </a>
-              </div>
+            <address className="mb-6 flex flex-col gap-3.5 text-sm not-italic">
+              {config.contact.address && (
+                <div>
+                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-white/40">Địa chỉ</p>
+                  <p className="whitespace-pre-line text-white/60">{config.contact.address}</p>
+                </div>
+              )}
+              {config.contact.email && (
+                <div>
+                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-white/40">Email</p>
+                  <a
+                    href={`mailto:${config.contact.email}`}
+                    className="text-white/60 transition-colors hover:text-white"
+                  >
+                    {config.contact.email}
+                  </a>
+                </div>
+              )}
             </address>
 
-            {/* Social */}
-            <FooterHeading>Theo dõi chúng tôi</FooterHeading>
-            <div className="flex items-center gap-2.5 mb-6">
-              {SOCIAL_LINKS.map(({ label, href, Icon, hoverClass }) => (
-                <a
-                  key={label}
-                  href={href}
-                  aria-label={label}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={[
-                    "flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-white/50 transition-all hover:bg-white/10",
-                    hoverClass,
-                  ].join(" ")}
-                >
-                  <Icon className="w-5 h-5" />
-                </a>
-              ))}
-            </div>
+            {config.socialLinks.length > 0 && (
+              <>
+                <FooterHeading>Theo dõi chúng tôi</FooterHeading>
+                <div className="mb-6 flex items-center gap-2.5">
+                  {config.socialLinks.map(({ platform, url }) => {
+                    const Icon = SOCIAL_ICON_MAP[platform as keyof typeof SOCIAL_ICON_MAP] ?? FacebookIcon;
+                    return (
+                      <a
+                        key={`${platform}-${url}`}
+                        href={url}
+                        aria-label={platform}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-white/50 transition-all hover:bg-white/10 hover:text-white"
+                      >
+                        <Icon className="h-5 w-5" />
+                      </a>
+                    );
+                  })}
+                </div>
+              </>
+            )}
 
-            {/* Certificates */}
             <div>
               <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-white/40">
                 Chứng nhận
@@ -233,29 +230,27 @@ export function Footer() {
         </div>
       </div>
 
-      {/* ── Bottom strip ── */}
       <div className="border-t border-white/10">
-        <div className="mx-auto max-w-[1450px] px-4 sm:px-6 lg:px-8 py-5">
+        <div className="mx-auto max-w-[1450px] px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
-
-            {/* Copyright + legal */}
-            <p className="text-xs text-white/40 text-center sm:text-left my-auto">
-              © {new Date().getFullYear()} TechStore Vietnam. All rights reserved.{" "}
-              <Link href="/privacy" className="hover:text-white/70 transition-colors">Chính sách bảo mật</Link>
-              {" · "}
-              <Link href="/terms" className="hover:text-white/70 transition-colors">Điều khoản dịch vụ</Link>
+            <p className="my-auto text-center text-xs text-white/40 sm:text-left">
+              {config.copyright}
+              {config.bottomLinks.length > 0 && " "}
+              {config.bottomLinks.map((link, index) => (
+                <span key={`${link.label}-${link.url}`}>
+                  {index === 0 ? "" : " · "}
+                  <Link href={link.url} className="transition-colors hover:text-white/70">
+                    {link.label}
+                  </Link>
+                </span>
+              ))}
             </p>
 
-            {/* Payment methods — center on all sizes */}
-            <div
-              className="flex flex-wrap justify-center items-center gap-2"
-              aria-label="Phương thức thanh toán"
-            >
+            <div className="flex flex-wrap items-center justify-center gap-2" aria-label="Phương thức thanh toán">
               {PAYMENT_METHODS.map(({ label, color }) => (
                 <PaymentBadge key={label} label={label} color={color} />
               ))}
             </div>
-
           </div>
         </div>
       </div>
