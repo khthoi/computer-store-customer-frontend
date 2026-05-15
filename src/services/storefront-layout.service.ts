@@ -1,4 +1,8 @@
 import { storefrontApiFetch } from "@/src/services/storefront-api.service";
+import {
+  getActiveAnnouncementBars,
+  getActivePopups,
+} from "@/src/services/storefront-announcement.service";
 import type {
   FooterConfigData,
   SearchShortcutItem,
@@ -10,6 +14,10 @@ import type {
   StorefrontMenuPosition,
   StorefrontPublicSettings,
 } from "@/src/types/storefront-layout.types";
+import type {
+  QuickSuggestionResponse,
+  QuickSuggestionVariant,
+} from "@/src/types/search.types";
 
 interface RawMenuItem {
   id?: string | number;
@@ -35,8 +43,6 @@ const FOOTER_POSITIONS = [
 const EMPTY_FOOTER_CONFIG: FooterConfigData = {
   brand: {
     logoUrl: "",
-    logoAlt: "PC Store",
-    storeName: "PC Store",
     description: "",
   },
   contact: {},
@@ -95,8 +101,6 @@ function fallbackFooterConfig(siteConfig: Record<string, string>): FooterConfigD
     ...EMPTY_FOOTER_CONFIG,
     brand: {
       logoUrl: "",
-      logoAlt: siteConfig.store_name ?? "PC Store",
-      storeName: siteConfig.store_name ?? "PC Store",
       description: siteConfig.store_description ?? "",
     },
     contact: {
@@ -145,7 +149,7 @@ function parsePublicSettings(
   );
 
   return {
-    siteName: settings.site_name || footerConfig.brand.storeName || EMPTY_PUBLIC_SETTINGS.siteName,
+    siteName: settings.site_name || EMPTY_PUBLIC_SETTINGS.siteName,
     logoUrl: settings.logo_url || footerConfig.brand.logoUrl || "",
     faviconUrl: settings.favicon_url || "",
     contactEmail: settings.contact_email || footerConfig.contact.email || "",
@@ -217,10 +221,17 @@ export function buildCategoryHref(node: StorefrontCategoryNode): string {
 
   if (node.nodeType === "filter" && node.filterParams) {
     const params = new URLSearchParams(node.filterParams);
-    return `/search?${params.toString()}`;
+    const parentSlug = typeof node.filterParams.category === "string"
+      ? node.filterParams.category
+      : node.slug;
+    params.delete("category");
+    const qs = params.toString();
+    return qs.length > 0
+      ? `/categories/${encodeURIComponent(parentSlug)}?${qs}`
+      : `/categories/${encodeURIComponent(parentSlug)}`;
   }
 
-  return `/search?category=${encodeURIComponent(node.slug)}`;
+  return `/categories/${encodeURIComponent(node.slug)}`;
 }
 
 export async function getPublicMenu(position: StorefrontMenuPosition): Promise<StorefrontMenu> {
@@ -275,11 +286,21 @@ export async function getStorefrontLayoutData(): Promise<StorefrontLayoutData> {
   ];
 
   try {
-    const [siteConfig, publicSettingsRaw, categoryTree, sideBanners, ...menus] = await Promise.all([
+    const [
+      siteConfig,
+      publicSettingsRaw,
+      categoryTree,
+      sideBanners,
+      activePopups,
+      activeAnnouncementBars,
+      ...menus
+    ] = await Promise.all([
       getPublicSiteConfig().catch(() => ({})),
       getPublicSettings().catch(() => ({})),
       getPublicCategoryTree().catch(() => []),
       getPublicSideBanners().catch(() => []),
+      getActivePopups().catch(() => []),
+      getActiveAnnouncementBars().catch(() => []),
       ...positions.map((position) =>
         getPublicMenu(position).catch(() => normalizeMenu({}, position)),
       ),
@@ -303,6 +324,8 @@ export async function getStorefrontLayoutData(): Promise<StorefrontLayoutData> {
       footerConfig,
       categoryTree,
       searchShortcuts: parseCategoryShortcuts(siteConfig, categoryTree),
+      activePopups,
+      activeAnnouncementBars,
     };
   } catch {
     return {
@@ -319,24 +342,43 @@ export async function getStorefrontLayoutData(): Promise<StorefrontLayoutData> {
       footerConfig: EMPTY_FOOTER_CONFIG,
       categoryTree: [],
       searchShortcuts: [],
+      activePopups: [],
+      activeAnnouncementBars: [],
     };
   }
 }
 
-export async function getSearchSuggestions(query: string): Promise<Array<{ id: string; name: string; slug: string }>> {
+const EMPTY_SUGGESTIONS: QuickSuggestionResponse = {
+  query: "",
+  products: [],
+  variants: [],
+  brands: [],
+  categories: [],
+  totalProductMatches: 0,
+  totalVariantMatches: 0,
+  totalBrandMatches: 0,
+  totalCategoryMatches: 0,
+};
+
+export async function getSearchSuggestions(query: string): Promise<QuickSuggestionResponse> {
   const q = query.trim();
   if (q.length < 2) {
-    return [];
+    return { ...EMPTY_SUGGESTIONS, query: q };
   }
 
   const params = new URLSearchParams({ q });
-  const items = await storefrontApiFetch<Array<{ id: number | string; name: string; slug: string }>>(
+  return storefrontApiFetch<QuickSuggestionResponse>(
     `/search/suggestions?${params.toString()}`,
   );
+}
 
-  return items.map((item) => ({
-    id: String(item.id),
-    name: item.name,
-    slug: item.slug,
-  }));
+export async function getProductVariantSuggestions(
+  productId: number,
+  limit?: number,
+): Promise<QuickSuggestionVariant[]> {
+  const params = new URLSearchParams();
+  if (limit) params.set("limit", String(limit));
+  const suffix = params.toString();
+  const path = `/search/products/${productId}/variants${suffix ? `?${suffix}` : ""}`;
+  return storefrontApiFetch<QuickSuggestionVariant[]>(path);
 }

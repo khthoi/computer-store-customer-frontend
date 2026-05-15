@@ -41,7 +41,7 @@ export function AuthModal({
       isOpen={isOpen}
       onClose={onClose}
       animated
-      size="sm"
+      size="xl"
       hideCloseButton={false}
     >
       {/* Tab switcher */}

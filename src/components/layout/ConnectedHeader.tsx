@@ -11,23 +11,28 @@
 
 import { useAuth } from "@/src/store/auth.store";
 import { useCart } from "@/src/store/cart.store";
+import { useWishlist } from "@/src/store/wishlist.store";
+import { useCompareCount } from "@/src/hooks/useCompareCount";
 import { Header } from "./Header";
 import type { StorefrontLayoutData } from "@/src/types/storefront-layout.types";
 
 export function ConnectedHeader({ layoutData }: { layoutData: StorefrontLayoutData }) {
   const { state: authState, logout } = useAuth();
   const { state: cartState } = useCart();
+  const { count: wishlistCount } = useWishlist();
+  const compareCount = useCompareCount();
 
-  const user = authState.user
+  const user = authState.hydrated && authState.user
     ? { name: authState.user.name, email: authState.user.email }
     : null;
 
   return (
     <Header
       cartCount={cartState.items.reduce((sum, i) => sum + i.quantity, 0)}
-      wishlistCount={0}
-      compareCount={0}
+      wishlistCount={wishlistCount}
+      compareCount={compareCount}
       user={user}
+      isAuthHydrated={authState.hydrated}
       onLogout={logout}
       topLinks={layoutData.headerTopMenu}
       navLinks={layoutData.headerMainMenu}

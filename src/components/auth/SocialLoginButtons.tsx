@@ -1,9 +1,7 @@
 "use client";
 
-import { FaFacebook } from "react-icons/fa";
 import type { OAuthProvider } from "@/src/types/auth.types";
 import { FcGoogle } from "react-icons/fc";
-import { SiZalo } from "react-icons/si";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,35 +59,12 @@ const PROVIDERS: ProviderConfig[] = [
       "border border-secondary-200 bg-white text-secondary-700 hover:bg-secondary-50 " +
       "focus-visible:ring-secondary-300",
   },
-  {
-    id: "facebook",
-    label: "Tiếp tục với Facebook",
-    icon: <FaFacebook className="size-5 shrink-0 text-[#1877F2]" />,
-    className:
-      "border border-secondary-200 bg-white text-secondary-700 hover:bg-secondary-50 " +
-      "focus-visible:ring-secondary-300",
-  },
-  {
-    id: "zalo",
-    label: "Tiếp tục với Zalo",
-    icon: <SiZalo className="size-5 shrink-0" />,
-    className:
-      "border border-secondary-200 bg-white text-secondary-700 hover:bg-secondary-50 " +
-      "focus-visible:ring-secondary-300",
-  },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 /**
- * SocialLoginButtons — renders Google, Facebook, and Zalo OAuth login buttons.
- *
- * ```tsx
- * <SocialLoginButtons
- *   onOAuth={handleOAuthLogin}
- *   loadingProvider={currentLoadingProvider}
- * />
- * ```
+ * SocialLoginButtons — renders OAuth login buttons (currently Google only).
  */
 export function SocialLoginButtons({
   onOAuth,

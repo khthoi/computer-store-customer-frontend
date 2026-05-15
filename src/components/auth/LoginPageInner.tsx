@@ -110,7 +110,7 @@ export function LoginPageInner({
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="w-full max-w-lg">
+    <div className={showBrand ? "w-full max-w-lg" : "w-full"}>
       {/* Brand header (page mode) */}
       {showBrand && (
         <div className="mb-8 text-center">

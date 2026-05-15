@@ -12,16 +12,12 @@ const SUPPRESSED_PREFIXES = [
   "/register",
   "/forgot-password",
   "/reset-password",
-  "/terms",
-  "/privacy",
-  "/about",
-  "/careers",
   "/contact",
-  "/huong-dan-mua-hang",
-  "/chinh-sach-bao-hanh",
   "/chinh-sach-doi-tra",
   "/faq",
   "/support/technical",
+  // CMS-driven static pages (/info/<slug>): narrow centred reading layout.
+  "/info/",
   // Search results page: full-width filter + product grid layout leaves no
   // room for fixed side banners without overlapping content at mid viewports.
   "/search",

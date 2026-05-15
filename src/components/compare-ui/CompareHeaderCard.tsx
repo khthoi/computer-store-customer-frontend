@@ -123,10 +123,21 @@ export function CompareHeaderCard({
           />
         </div>
 
-        {/* Brand */}
-        <Badge variant="default" size="sm" className="w-fit uppercase tracking-wider">
-          {product.brand}
-        </Badge>
+        {/* Brand(s) */}
+        {product.brands.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {product.brands.map((b) => (
+              <Badge
+                key={b}
+                variant="default"
+                size="sm"
+                className="w-fit uppercase tracking-wider"
+              >
+                {b}
+              </Badge>
+            ))}
+          </div>
+        )}
 
         {/* Name — Tooltip reveals the full name when it is clamped.
             min-h reserves space for 2 lines so a 1-line name never shifts

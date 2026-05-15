@@ -9,7 +9,7 @@ export interface AuthUser {
   role: "customer" | "admin";
 }
 
-export type OAuthProvider = "google" | "facebook" | "zalo";
+export type OAuthProvider = "google";
 
 export type AuthModalMode = "login" | "register";
 

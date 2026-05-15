@@ -241,12 +241,21 @@ export const ProductCard = memo(function ProductCard({
             aria-hidden="true"
             className="relative block h-32 w-32 shrink-0 overflow-hidden rounded-lg bg-secondary-50"
           >
-            <img
-              src={thumbnail}
-              alt={thumbnailAlt ?? name}
-              className="h-full w-full object-contain p-2 transition-transform duration-300 hover:scale-105"
-              loading="lazy"
-            />
+            {thumbnail ? (
+              <img
+                src={thumbnail}
+                alt={thumbnailAlt ?? name}
+                className="h-full w-full object-contain p-2 transition-transform duration-300 hover:scale-105"
+                loading="lazy"
+              />
+            ) : (
+              <div
+                aria-hidden="true"
+                className="flex h-full w-full items-center justify-center text-[10px] text-secondary-400"
+              >
+                Không có ảnh
+              </div>
+            )}
             {badge && (
               <span className="absolute left-1 top-1 rounded bg-error-500 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-white">
                 {badge}
@@ -265,8 +274,14 @@ export const ProductCard = memo(function ProductCard({
                 <RatingStars value={rating} count={reviewCount} size="sm" />
               )}
               {productCode && (
-                <Badge variant="default" size="sm" className="font-mono tracking-wide">
-                  {productCode}
+                <Badge
+                  variant="default"
+                  size="sm"
+                  className="font-mono tracking-wide min-w-0 max-w-[12rem]"
+                >
+                  <span className="block truncate" title={productCode}>
+                    {productCode}
+                  </span>
                 </Badge>
               )}
             </div>
@@ -371,12 +386,18 @@ export const ProductCard = memo(function ProductCard({
           aria-hidden="true"
         >
           <div className="flex h-full items-center justify-center">
-            <img
-              src={thumbnail}
-              alt={thumbnailAlt ?? name}
-              className="max-h-full w-full object-contain p-4 transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
-            />
+            {thumbnail ? (
+              <img
+                src={thumbnail}
+                alt={thumbnailAlt ?? name}
+                className="max-h-full w-full object-contain p-4 transition-transform duration-300 group-hover:scale-105"
+                loading="lazy"
+              />
+            ) : (
+              <span aria-hidden="true" className="text-xs text-secondary-400">
+                Không có ảnh
+              </span>
+            )}
           </div>
 
           {/* Promo badge */}
@@ -407,10 +428,16 @@ export const ProductCard = memo(function ProductCard({
 
           {/* ── 2. Meta Section ── */}
           <div className="flex flex-col gap-1.5">
-            {/* Brand badge */}
-            <span className="inline-flex w-fit items-center rounded bg-secondary-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-secondary-600">
-              {brand}
-            </span>
+            {/* Brand badge — always reserves height even when brand is empty */}
+            <div className="flex min-h-[18px] items-center">
+              {brand ? (
+                <span className="inline-flex w-fit items-center rounded bg-secondary-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-secondary-600">
+                  {brand}
+                </span>
+              ) : (
+                <span aria-hidden="true" className="inline-block h-[18px]" />
+              )}
+            </div>
 
             {/* Product name — clamped to exactly 3 lines; min-h/max-h lock the row height */}
             <Tooltip content={name} placement="top">
@@ -423,10 +450,16 @@ export const ProductCard = memo(function ProductCard({
             </Tooltip>
 
             {/* Product code badge — min-h-[20px] reserves space when absent */}
-            <div className="flex min-h-[20px] items-center">
+            <div className="flex min-h-[20px] min-w-0 items-center">
               {productCode && (
-                <Badge variant="default" size="sm" className="font-mono tracking-wide">
-                  {productCode}
+                <Badge
+                  variant="default"
+                  size="sm"
+                  className="font-mono tracking-wide min-w-0 max-w-full"
+                >
+                  <span className="block truncate" title={productCode}>
+                    {productCode}
+                  </span>
                 </Badge>
               )}
             </div>

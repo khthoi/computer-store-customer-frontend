@@ -146,13 +146,20 @@ export function ProductHeroClient({
       {/* ── Right column content ── */}
       <div className="flex flex-col gap-4">
 
-        {/* Brand */}
-        <a
-          href={`/products?brand=${encodeURIComponent(product.brand)}`}
-          className="inline-flex w-fit items-center rounded bg-secondary-100 px-2 py-1 text-xs font-semibold uppercase tracking-wider text-secondary-600 hover:bg-secondary-200 transition-colors"
-        >
-          {product.brand}
-        </a>
+        {/* Brand(s) */}
+        {product.brands.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {product.brands.map((b) => (
+              <a
+                key={b}
+                href={`/products?brand=${encodeURIComponent(b)}`}
+                className="inline-flex w-fit items-center rounded bg-secondary-100 px-2 py-1 text-xs font-semibold uppercase tracking-wider text-secondary-600 hover:bg-secondary-200 transition-colors"
+              >
+                {b}
+              </a>
+            ))}
+          </div>
+        )}
 
         {/* Product name */}
         <h1 className="text-2xl sm:text-3xl font-bold text-secondary-900 leading-tight">

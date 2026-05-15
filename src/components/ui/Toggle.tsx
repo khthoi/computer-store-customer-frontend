@@ -24,6 +24,10 @@ export interface ToggleProps
    * @default false
    */
   labelLeft?: boolean;
+  /** Place the label block above the toggle
+   * @default false
+   */
+  labelTop?: boolean;
 }
 
 // ─── Dimensions ───────────────────────────────────────────────────────────────
@@ -80,6 +84,7 @@ export const Toggle = forwardRef<HTMLInputElement, ToggleProps>(function Toggle(
     description,
     size = "md",
     labelLeft = false,
+    labelTop = false,
     id: idProp,
     checked,
     defaultChecked,
@@ -160,7 +165,7 @@ export const Toggle = forwardRef<HTMLInputElement, ToggleProps>(function Toggle(
         <label
           htmlFor={id}
           className={[
-            "block font-medium text-secondary-800",
+            "inline-block font-medium text-secondary-800",
             TEXT[size],
             disabled ? "cursor-not-allowed" : "cursor-pointer",
           ].join(" ")}
@@ -179,16 +184,25 @@ export const Toggle = forwardRef<HTMLInputElement, ToggleProps>(function Toggle(
   return (
     <div
       className={[
-        "flex items-center gap-3",
+        labelTop ? "mb-4 flex flex-col items-start gap-2" : "mb-4 flex items-center gap-3",
         disabled ? "opacity-60" : "",
         className,
       ]
         .filter(Boolean)
         .join(" ")}
     >
-      {labelLeft && textContent}
-      {track}
-      {!labelLeft && textContent}
+      {labelTop ? (
+        <>
+          {textContent}
+          {track}
+        </>
+      ) : (
+        <>
+          {labelLeft && textContent}
+          {track}
+          {!labelLeft && textContent}
+        </>
+      )}
     </div>
   );
 });
@@ -202,6 +216,7 @@ export const Toggle = forwardRef<HTMLInputElement, ToggleProps>(function Toggle(
  * description   string             —        Secondary text below label
  * size          "sm"|"md"|"lg"     "md"     Toggle dimensions
  * labelLeft     boolean            false    Render label before the track
+ * labelTop      boolean            false    Render label block above the track
  * checked       boolean            —        Controlled state
  * defaultChecked boolean           false    Uncontrolled initial state
  * onChange      ChangeEventHandler —        Change handler

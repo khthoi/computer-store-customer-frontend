@@ -10,20 +10,23 @@ import { Drawer } from "@/src/components/ui/Drawer";
 import { Select } from "@/src/components/ui/Select";
 import { Pagination } from "@/src/components/navigation/Pagination";
 import { ProductCardList } from "@/src/components/product/ProductCardList";
-import { SearchBar } from "./SearchBar";
+import { toProductCardProps } from "@/src/types/storefront-product-card.types";
 import { SearchFiltersPanel } from "./SearchFiltersPanel";
 import { SearchEmptyState } from "./SearchEmptyState";
+import {
+  PRICE_MAX,
+  PRICE_MIN,
+  SORT_OPTIONS,
+  type FilterDefinition,
+  type FilterState,
+  type FilterValue,
+} from "@/src/app/(storefront)/products/_config";
+import { buildSearchFilterDefinitions } from "@/src/app/(storefront)/search/_search_config";
+import type { StorefrontBrand } from "@/src/services/storefront-catalog-meta.service";
 import type {
-  FilterDefinition,
-  FilterState,
-  FilterValue,
-} from "@/src/app/(storefront)/products/demo/_config";
-import { SORT_OPTIONS } from "@/src/app/(storefront)/products/demo/_config";
-import type { SearchResults } from "@/src/app/(storefront)/search/_mock_data";
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const ITEMS_PER_PAGE = 12;
+  StorefrontSearchResults,
+  StorefrontSearchSort,
+} from "@/src/types/storefront-search.types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -36,25 +39,21 @@ function isFilterActive(value: FilterValue | undefined): boolean {
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return true;
   if (typeof value === "string") return value !== "";
-  if (Array.isArray(value)) {
-    if (value.length === 0) return false;
-    return typeof value[0] === "number" ? true : value.length > 0;
-  }
+  if (Array.isArray(value)) return value.length > 0;
   return false;
 }
 
 interface ActiveChip {
-  key: string;   // e.g. "brand:asus" or "price" or "inStock"
+  key: string;
   label: string;
   group: string;
 }
 
 function buildActiveFilters(
   state: FilterState,
-  definitions: FilterDefinition[]
+  definitions: FilterDefinition[],
 ): ActiveChip[] {
   const chips: ActiveChip[] = [];
-
   for (const def of definitions) {
     const val = state[def.key];
     if (!isFilterActive(val)) continue;
@@ -91,132 +90,185 @@ function buildActiveFilters(
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export interface SearchInitialState {
+  categorySlug?: string;
+  brandSlug?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  inStock?: boolean;
+  ratingMin?: number;
+  sort: StorefrontSearchSort;
+  page: number;
+}
+
 export interface SearchResultsPageInnerProps {
-  results: SearchResults;
+  results: StorefrontSearchResults;
   query: string;
-  filterDefinitions: FilterDefinition[];
+  brands: StorefrontBrand[];
+  initialState: SearchInitialState;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-/**
- * SearchResultsPageInner — client root for /search.
- *
- * Zones:
- *  1. Search hero — large SearchBar + result count + didYouMean suggestion
- *  2. Category/brand chips (when non-product results exist)
- *  3. Filters sidebar + product grid + pagination
- */
 export function SearchResultsPageInner({
   results,
   query,
-  filterDefinitions,
+  brands,
+  initialState,
 }: SearchResultsPageInnerProps) {
   const router = useRouter();
 
-  // ── Local state ──────────────────────────────────────────────────────────────
-  const [filterState, setFilterState] = useState<FilterState>({});
-  const [sortBy, setSortBy] = useState("bestselling");
-  const [currentPage, setCurrentPage] = useState(1);
+  const filterDefinitions = useMemo(
+    () => buildSearchFilterDefinitions(brands),
+    [brands],
+  );
+
+  // Initialise filter state from URL-derived initialState.
+  const initialFilterState = useMemo<FilterState>(() => {
+    const state: FilterState = {};
+    if (initialState.brandSlug) state.brand = [initialState.brandSlug];
+    if (initialState.minPrice != null || initialState.maxPrice != null) {
+      state.price = [
+        initialState.minPrice ?? PRICE_MIN,
+        initialState.maxPrice ?? PRICE_MAX,
+      ];
+    }
+    if (initialState.inStock) state.inStock = true;
+    if (initialState.ratingMin != null) state.rating = initialState.ratingMin;
+    return state;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // appliedFilters = committed to URL; draftFilters = what the panel shows
+  const [appliedFilters, setAppliedFilters] = useState<FilterState>(initialFilterState);
+  const [draftFilters, setDraftFilters] = useState<FilterState>(initialFilterState);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
-  // ── Navigation ───────────────────────────────────────────────────────────────
+  const filterHasChanges = useMemo(
+    () => JSON.stringify(draftFilters) !== JSON.stringify(appliedFilters),
+    [draftFilters, appliedFilters],
+  );
+
+  // Build URL params from filter state + sort + page and push to router.
+  const pushUrl = useCallback(
+    (overrides: {
+      filters?: FilterState;
+      sort?: StorefrontSearchSort;
+      page?: number;
+      q?: string;
+      categorySlug?: string;
+    }) => {
+      const nextFilters = overrides.filters ?? appliedFilters;
+      const nextSort = overrides.sort ?? initialState.sort;
+      const nextPage = overrides.page ?? 1;
+      const nextQuery = overrides.q ?? query;
+      const nextCategorySlug = overrides.categorySlug ?? initialState.categorySlug;
+
+      const sp = new URLSearchParams();
+      if (nextQuery) sp.set("q", nextQuery);
+      if (nextCategorySlug) sp.set("category", nextCategorySlug);
+
+      const brandSlugs = nextFilters.brand as string[] | undefined;
+      if (brandSlugs && brandSlugs.length > 0) sp.set("brand", brandSlugs[0]);
+
+      const price = nextFilters.price as [number, number] | undefined;
+      if (price && (price[0] !== PRICE_MIN || price[1] !== PRICE_MAX)) {
+        sp.set("minPrice", String(price[0]));
+        sp.set("maxPrice", String(price[1]));
+      }
+      if (nextFilters.inStock === true) sp.set("inStock", "1");
+      if (typeof nextFilters.rating === "number") {
+        sp.set("rating", String(nextFilters.rating));
+      }
+      if (nextSort !== "bestselling") sp.set("sort", nextSort);
+      if (nextPage > 1) sp.set("page", String(nextPage));
+
+      router.replace(`/search?${sp.toString()}`, { scroll: false });
+    },
+    [appliedFilters, initialState.sort, initialState.categorySlug, query, router],
+  );
+
+  function applyFilters(next: FilterState) {
+    setAppliedFilters(next);
+    setDraftFilters(next);
+    pushUrl({ filters: next, page: 1 });
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
+  function handleApply() {
+    applyFilters(draftFilters);
+  }
+
+  function handleSortChange(value: string | string[]) {
+    const next = (typeof value === "string" ? value : value[0]) as StorefrontSearchSort;
+    pushUrl({ sort: next, page: 1 });
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
+  function removeChip(chipKey: string) {
+    const [filterKey, optionValue] = chipKey.split(":");
+    const next: FilterState = { ...appliedFilters };
+    if (optionValue !== undefined) {
+      const arr = (next[filterKey] as string[]) ?? [];
+      const filtered = arr.filter((v) => v !== optionValue);
+      if (filtered.length === 0) {
+        delete next[filterKey];
+      } else {
+        next[filterKey] = filtered;
+      }
+    } else {
+      delete next[filterKey];
+    }
+    applyFilters(next);
+  }
+
+  function handlePageChange(nextPage: number) {
+    pushUrl({ page: nextPage });
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
 
   const handleNewSearch = useCallback(
     (q: string) => {
       router.replace(`/search?q=${encodeURIComponent(q)}`);
     },
-    [router]
+    [router],
   );
-
-  // ── Filter & sort helpers ────────────────────────────────────────────────────
-
-  function handleFilterChange(next: FilterState) {
-    setFilterState(next);
-    setCurrentPage(1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function handleSortChange(v: string | string[]) {
-    setSortBy(typeof v === "string" ? v : v[0] ?? "bestselling");
-    setCurrentPage(1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function removeChip(chipKey: string) {
-    const [filterKey, optionValue] = chipKey.split(":");
-    setFilterState((prev) => {
-      const next = { ...prev };
-      if (optionValue !== undefined) {
-        // Multi-select: remove just this option value
-        const arr = (prev[filterKey] as string[]) ?? [];
-        const newArr = arr.filter((v) => v !== optionValue);
-        if (newArr.length === 0) {
-          delete next[filterKey];
-        } else {
-          next[filterKey] = newArr;
-        }
-      } else {
-        delete next[filterKey];
-      }
-      return next;
-    });
-    setCurrentPage(1);
-  }
-
-  // ── Derived data ─────────────────────────────────────────────────────────────
 
   const activeChips = useMemo(
-    () => buildActiveFilters(filterState, filterDefinitions),
-    [filterState, filterDefinitions]
+    () => buildActiveFilters(appliedFilters, filterDefinitions),
+    [appliedFilters, filterDefinitions],
   );
 
-  const totalPages = Math.max(1, Math.ceil(results.totalProducts / ITEMS_PER_PAGE));
-
-  const paginatedProducts = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return results.products.slice(start, start + ITEMS_PER_PAGE);
-  }, [results.products, currentPage]);
+  const productCards = useMemo(
+    () => results.products.map(toProductCardProps),
+    [results.products],
+  );
 
   const hasNonProductResults =
-    results.categories.length > 0 || results.brands.length > 0;
-
-  const isEmpty = results.totalProducts === 0;
-
-  // ─────────────────────────────────────────────────────────────────────────────
+    results.relatedCategories.length > 0 || results.relatedBrands.length > 0;
+  const isEmpty = results.total === 0;
 
   return (
     <>
       {/* ── Zone 1: Search Hero ─────────────────────────────────────────── */}
       <section className="py-8">
         <div className="mx-auto w-full max-w-2xl px-4 sm:px-6">
-
-          {/* Result summary */}
           {!isEmpty && (
             <p className="mt-3 text-center text-sm text-secondary-500">
               Tìm thấy{" "}
               <strong className="font-semibold text-secondary-900">
-                {results.totalProducts} kết quả
+                {results.total} kết quả
               </strong>{" "}
               cho{" "}
               <strong className="font-semibold text-secondary-900">
                 &ldquo;{query}&rdquo;
               </strong>
-            </p>
-          )}
-
-          {/* Did-you-mean suggestion */}
-          {results.didYouMean && (
-            <p className="mt-2 text-center text-sm text-secondary-500">
-              Bạn có muốn tìm:{" "}
-              <button
-                type="button"
-                onClick={() => handleNewSearch(results.didYouMean!)}
-                className="font-medium text-primary-600 underline underline-offset-2 hover:text-primary-700 transition-colors"
-              >
-                {results.didYouMean}
-              </button>
-              ?
             </p>
           )}
         </div>
@@ -230,31 +282,28 @@ export function SearchResultsPageInner({
               className="flex gap-3 overflow-x-auto pb-1 scrollbar-thin"
               aria-label="Danh mục và thương hiệu liên quan"
             >
-              {results.categories.map((cat) => (
+              {results.relatedCategories.map((cat) => (
                 <Link
                   key={cat.id}
-                  href={cat.href}
+                  href={`/categories/${encodeURIComponent(cat.slug)}`}
                   className="flex shrink-0 items-center gap-2 rounded-full border border-secondary-200 bg-white px-3 py-1.5 text-sm text-secondary-700 transition-colors hover:border-primary-400 hover:text-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
                 >
-                  {cat.thumbnail && (
+                  {cat.iconUrl && (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
-                      src={cat.thumbnail}
+                      src={cat.iconUrl}
                       alt=""
                       className="h-5 w-5 object-contain"
                     />
                   )}
                   <span>{cat.name}</span>
-                  <Badge variant="default" size="sm">
-                    {cat.productCount}
-                  </Badge>
                 </Link>
               ))}
 
-              {results.brands.map((brand) => (
+              {results.relatedBrands.map((brand) => (
                 <Link
                   key={brand.id}
-                  href={brand.href}
+                  href={`/search?q=${encodeURIComponent(query)}&brand=${encodeURIComponent(brand.slug)}`}
                   className="flex shrink-0 items-center gap-2 rounded-full border border-secondary-200 bg-white px-3 py-1.5 text-sm text-secondary-700 transition-colors hover:border-primary-400 hover:text-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
                 >
                   {brand.logoUrl ? (
@@ -283,108 +332,108 @@ export function SearchResultsPageInner({
       {/* ── Zone 3: Filters + Product Results ──────────────────────────── */}
       <section className="py-8">
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
-          {isEmpty ? (
-            /* Empty state — full width, no filter column */
-            <SearchEmptyState query={query} onSearch={handleNewSearch} />
-          ) : (
-            <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-              {/* ── Left: Filter panel (desktop) ── */}
-              <aside className="hidden lg:block" aria-label="Bộ lọc">
-                <div className="sticky top-24 rounded-xl border border-secondary-200 bg-white p-4">
-                  <SearchFiltersPanel
-                    definitions={filterDefinitions}
-                    value={filterState}
-                    onChange={handleFilterChange}
-                  />
-                </div>
-              </aside>
+          <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
+            {/* Sidebar — always visible so users can adjust filters even when empty */}
+            <aside className="hidden lg:block" aria-label="Bộ lọc">
+              <div className="sticky top-24 rounded-xl border border-secondary-200 bg-white p-4">
+                <SearchFiltersPanel
+                  definitions={filterDefinitions}
+                  value={draftFilters}
+                  onChange={setDraftFilters}
+                  onApply={handleApply}
+                  hasChanges={filterHasChanges}
+                />
+              </div>
+            </aside>
 
-              {/* ── Right: Controls + grid ── */}
-              <div className="min-w-0">
-                {/* Top control bar */}
-                <div className="mb-5 flex flex-wrap items-start gap-3">
-                  {/* Mobile filter button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    leftIcon={<FunnelIcon />}
-                    onClick={() => setMobileFiltersOpen(true)}
-                    className="lg:hidden shrink-0"
-                  >
-                    Lọc
-                  </Button>
+            <div className="min-w-0">
+              {/* Toolbar: mobile filter button + active chips + sort */}
+              <div className="mb-5 flex flex-wrap items-start gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<FunnelIcon />}
+                  onClick={() => setMobileFiltersOpen(true)}
+                  className="lg:hidden shrink-0"
+                >
+                  Lọc
+                </Button>
 
-                  {/* Active filter chips */}
-                  <div className="flex flex-1 flex-wrap items-center gap-2">
-                    {activeChips.map((chip) => (
-                      <span
-                        key={chip.key}
-                        className="inline-flex items-center gap-1 rounded-full border border-primary-200 bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-700"
-                      >
-                        {chip.group && (
-                          <span className="text-primary-500">{chip.group}:</span>
-                        )}
-                        {chip.label}
-                        <button
-                          type="button"
-                          aria-label={`Xóa bộ lọc ${chip.label}`}
-                          onClick={() => removeChip(chip.key)}
-                          className="ml-0.5 rounded-full p-0.5 hover:bg-primary-200 transition-colors"
-                        >
-                          <XMarkIcon className="h-3 w-3" aria-hidden="true" />
-                        </button>
-                      </span>
-                    ))}
-
-                    {activeChips.length > 0 && (
+                <div className="flex flex-1 flex-wrap items-center gap-2">
+                  {activeChips.map((chip) => (
+                    <span
+                      key={chip.key}
+                      className="inline-flex items-center gap-1 rounded-full border border-primary-200 bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-700"
+                    >
+                      {chip.group && (
+                        <span className="text-primary-500">{chip.group}:</span>
+                      )}
+                      {chip.label}
                       <button
                         type="button"
-                        onClick={() => handleFilterChange({})}
-                        className="text-xs text-secondary-500 hover:text-secondary-700 transition-colors underline underline-offset-2"
+                        aria-label={`Xóa bộ lọc ${chip.label}`}
+                        onClick={() => removeChip(chip.key)}
+                        className="ml-0.5 rounded-full p-0.5 hover:bg-primary-200 transition-colors"
                       >
-                        Xóa tất cả bộ lọc
+                        <XMarkIcon className="h-3 w-3" aria-hidden="true" />
                       </button>
-                    )}
-                  </div>
+                    </span>
+                  ))}
 
-                  {/* Sort selector */}
+                  {activeChips.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => applyFilters({})}
+                      className="text-xs text-secondary-500 hover:text-secondary-700 transition-colors underline underline-offset-2"
+                    >
+                      Xóa tất cả bộ lọc
+                    </button>
+                  )}
+                </div>
+
+                {!isEmpty && (
                   <div className="ml-auto w-44 shrink-0">
                     <Select
                       options={SORT_OPTIONS}
-                      value={[sortBy]}
+                      value={[initialState.sort]}
                       onChange={handleSortChange}
                       size="sm"
                       placeholder="Sắp xếp"
                     />
                   </div>
-                </div>
-
-                {/* Product grid */}
-                <ProductCardList
-                  products={paginatedProducts}
-                  itemsPerRow={6}
-                />
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="mt-8 flex justify-center">
-                    <Pagination
-                      page={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={(p) => {
-                        setCurrentPage(p);
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                    />
-                  </div>
                 )}
               </div>
+
+              {isEmpty ? (
+                <SearchEmptyState
+                  query={query}
+                  onSearch={handleNewSearch}
+                  relatedCategories={results.relatedCategories}
+                  relatedBrands={results.relatedBrands}
+                  hasActiveFilters={Object.keys(appliedFilters).length > 0}
+                  onClearFilters={() => applyFilters({})}
+                  topBrands={brands.slice(0, 8)}
+                />
+              ) : (
+                <>
+                  <ProductCardList products={productCards} itemsPerRow={6} />
+
+                  {results.totalPages > 1 && (
+                    <div className="mt-8 flex justify-center">
+                      <Pagination
+                        page={results.page}
+                        totalPages={results.totalPages}
+                        onPageChange={handlePageChange}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </section>
 
-      {/* ── Mobile filters drawer ──────────────────────────────────────── */}
       <Drawer
         isOpen={mobileFiltersOpen}
         onClose={() => setMobileFiltersOpen(false)}
@@ -395,11 +444,13 @@ export function SearchResultsPageInner({
         <div className="p-4">
           <SearchFiltersPanel
             definitions={filterDefinitions}
-            value={filterState}
-            onChange={(next) => {
-              handleFilterChange(next);
+            value={draftFilters}
+            onChange={setDraftFilters}
+            onApply={() => {
+              handleApply();
               setMobileFiltersOpen(false);
             }}
+            hasChanges={filterHasChanges}
           />
         </div>
       </Drawer>

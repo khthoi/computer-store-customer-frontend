@@ -317,7 +317,7 @@ export default function SupportTechnicalPage() {
                 </li>
                 <li>
                   <Link
-                    href={ROUTES.chinhSachBaoHanh}
+                    href={ROUTES.staticPage("chinh-sach-bao-hanh")}
                     className="text-sm text-primary-600 hover:underline flex gap-1.5"
                   >
                     <span>🛡</span> Chính sách bảo hành
@@ -333,7 +333,7 @@ export default function SupportTechnicalPage() {
                 </li>
                 <li>
                   <Link
-                    href={ROUTES.huongDanMuaHang}
+                    href={ROUTES.staticPage("huong-dan-mua-hang")}
                     className="text-sm text-primary-600 hover:underline flex gap-1.5"
                   >
                     <span>📋</span> Hướng dẫn mua hàng

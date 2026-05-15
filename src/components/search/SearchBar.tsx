@@ -90,16 +90,10 @@ export function SearchBar({
     inputRef.current?.focus();
   }
 
-  // ── Focus management (container-level) ───────────────────────────────────────
-  // Using the container's onBlur (which bubbles from any descendant) lets us
-  // check whether focus moved to another element *inside* the container — e.g.
-  // clicking a suggestion item. If it did, keep the popover open.
-
-  function handleContainerBlur(e: React.FocusEvent<HTMLDivElement>) {
-    if (!containerRef.current?.contains(e.relatedTarget as Node)) {
-      setIsFocused(false);
-    }
-  }
+  // ── Focus management ────────────────────────────────────────────────────────
+  // The popover renders through a portal and tracks outside clicks itself,
+  // so we no longer rely on a container-level onBlur — it would fire spuriously
+  // when the user clicks an item that is no longer inside the container DOM tree.
 
   // ── Size variants ────────────────────────────────────────────────────────────
 
@@ -121,11 +115,7 @@ export function SearchBar({
   const clearIconSize = isLg ? "w-5 h-5" : "w-4 h-4";
 
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full"
-      onBlur={handleContainerBlur}
-    >
+    <div ref={containerRef} className="relative w-full">
       <form
         role="search"
         aria-label="Tìm kiếm sản phẩm"
@@ -172,6 +162,7 @@ export function SearchBar({
         onSubmit={submit}
         onClose={() => setIsFocused(false)}
         shortcutItems={shortcutItems}
+        anchorRef={containerRef}
       />
     </div>
   );

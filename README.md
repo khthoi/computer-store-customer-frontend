@@ -22,11 +22,10 @@ NEXTAUTH_SECRET=your-secret
 ## AI Development — READ FIRST
 If you are an AI assistant, follow this order:
 1. .ai/CODING_RULES.md          ← mandatory rules
-2. .ai/PROJECT_CONTEXT.md       ← business rules
-3. .ai/SYSTEM_ARCHITECTURE.md   ← architecture + shared UI strategy
-4. .ai/DESIGN_SYSTEM.md      ← design tokens
-5. .ai/ICON_SYSTEM.md  ← icon rules
-6. .ai/COMPONENT_GUIDELINES.md  ← when to use shared vs local
-7. .ai/FEATURE_SPEC.md          ← feature you are building
-8. .ai/API_CONTRACT.md          ← endpoint + types
-9. .ai/AI_DEVELOPMENT_GUIDE.md  ← step-by-step workflow
+2. .ai/SYSTEM_ARCHITECTURE.md   ← architecture + shared UI strategy
+3. .ai/DESIGN_SYSTEM.md         ← design tokens
+4. .ai/ICON_SYSTEM.md            ← icon rules
+5. .ai/COMPONENT_GUIDELINES.md  ← when to use shared vs local
+6. .ai/FEATURE_SPEC.md          ← feature you are building
+7. .ai/API_CONTRACT.md          ← endpoint + types
+8. .ai/AI_DEVELOPMENT_GUIDE.md  ← step-by-step workflow

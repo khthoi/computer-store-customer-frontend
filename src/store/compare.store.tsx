@@ -43,6 +43,7 @@ const INITIAL_STATE: CompareState = {
 type CompareAction =
   | { type: "ADD_PRODUCT"; payload: CompareProduct }
   | { type: "REMOVE_PRODUCT"; payload: string }
+  | { type: "UPDATE_PRODUCT"; payload: CompareProduct }
   | { type: "CLEAR_ALL" }
   | { type: "OPEN_DRAWER" }
   | { type: "CLOSE_DRAWER" }
@@ -70,6 +71,14 @@ function compareReducer(
         compareList: [...state.compareList, p],
         activeCategory: state.activeCategory ?? p.category,
       };
+    }
+    case "UPDATE_PRODUCT": {
+      const p = action.payload;
+      const idx = state.compareList.findIndex((x) => x.id === p.id);
+      if (idx === -1) return state;
+      const next = state.compareList.slice();
+      next[idx] = p;
+      return { ...state, compareList: next };
     }
     case "REMOVE_PRODUCT": {
       const next = state.compareList.filter((p) => p.id !== action.payload);
@@ -100,6 +109,7 @@ export interface CompareContextValue {
   state: CompareState;
   addProduct: (product: CompareProduct) => void;
   removeProduct: (id: string) => void;
+  updateProduct: (product: CompareProduct) => void;
   clearAll: () => void;
   openDrawer: () => void;
   closeDrawer: () => void;
@@ -266,6 +276,10 @@ export function CompareProvider({
     dispatch({ type: "REMOVE_PRODUCT", payload: id });
   }, []);
 
+  const updateProduct = useCallback((product: CompareProduct) => {
+    dispatch({ type: "UPDATE_PRODUCT", payload: product });
+  }, []);
+
   const clearAll = useCallback(() => {
     dispatch({ type: "CLEAR_ALL" });
   }, []);
@@ -280,7 +294,7 @@ export function CompareProvider({
 
   return (
     <CompareContext.Provider
-      value={{ state, addProduct, removeProduct, clearAll, openDrawer, closeDrawer }}
+      value={{ state, addProduct, removeProduct, updateProduct, clearAll, openDrawer, closeDrawer }}
     >
       {children}
 

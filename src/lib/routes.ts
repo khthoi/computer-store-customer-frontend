@@ -14,18 +14,16 @@ export const ROUTES = {
   checkout: "/checkout",
   checkoutSuccess: "/checkout/success",
   promotions: "/promotions",
-  terms: "/terms",
-  privacy: "/privacy",
 
   // ── Informational ─────────────────────────────────────────────────────────────
-  about: "/about",
-  careers: "/careers",
   contact: "/contact",
-  huongDanMuaHang: "/huong-dan-mua-hang",
-  chinhSachBaoHanh: "/chinh-sach-bao-hanh",
   chinhSachDoiTra: "/chinh-sach-doi-tra",
   faq: "/faq",
   supportTechnical: "/support/technical",
+
+  // ── CMS-driven static pages (slug managed in admin /content/pages) ──────────
+  // Slugs in DB are normalized to "info/<slug>" — URL prefix mirrors that.
+  staticPage: (slug: string) => `/info/${slug.replace(/^info\//, "")}`,
 
   // ── Auth ─────────────────────────────────────────────────────────────────────
   login: "/login",

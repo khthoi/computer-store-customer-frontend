@@ -16,10 +16,24 @@ import { XMarkIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { Pagination } from "@/src/components/navigation/Pagination";
 import { Checkbox } from "@/src/components/ui/Checkbox";
 import { Select } from "@/src/components/ui/Select";
+import { Toggle } from "@/src/components/ui/Toggle";
 import type { SelectOption } from "@/src/components/ui/Select";
 import { PartPickerProductItem } from "@/src/components/buildpc/PartPickerProductItem";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface PartPickerProductVariant {
+  /** variantId (string) — passed back via onSelect */
+  value: string;
+  /** Display label (typically variant name or SKU) */
+  label: string;
+  /** Stock at the variant level */
+  stock?: number;
+  /** Sale price of this variant */
+  price?: number;
+  /** Original price (when discounted) */
+  originalPrice?: number;
+}
 
 export interface PartPickerProduct {
   id: string;
@@ -32,8 +46,11 @@ export interface PartPickerProduct {
   platform?: string;
   /** Warranty duration shown as a badge (e.g. "36 tháng") */
   warranty?: string;
-  /** When provided, user must pick a variant before adding to build */
-  variants?: { value: string; label: string }[];
+  /**
+   * Product variants. When provided (length >= 1), user picks a variant before adding.
+   * `value` is the variantId. Each variant carries its own price + stock.
+   */
+  variants?: PartPickerProductVariant[];
   availability?: "in-stock" | "out-of-stock" | "limited";
   /** If provided, the product name becomes a link that opens in a new tab */
   href?: string;
@@ -54,11 +71,19 @@ export interface PartPickerModalProps {
   selectedVariantValue?: string;
   /** Called with the selected product id and chosen variant; modal auto-closes ~180 ms later */
   onSelect: (id: string, variantValue?: string) => void;
+  /** Optional dynamic filter panel rendered above the default brand/price/platform filters */
+  extraFilters?: ReactNode;
+  /** When true, show a small loading hint above the product list */
+  isLoading?: boolean;
+  /** Stock-only filter state controlled by parent fetch layer */
+  inStockOnly?: boolean;
+  /** Called when the stock-only filter changes */
+  onInStockOnlyChange?: (value: boolean) => void;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const ITEMS_PER_PAGE = 5;
+const ITEMS_PER_PAGE = 20;
 
 const PRICE_RANGES = [
   { id: "under-5m",  label: "Dưới 5 triệu",  min: 0,          max: 5_000_000  },
@@ -101,6 +126,16 @@ function FilterGroup({
   );
 }
 
+function isProductInStock(product: PartPickerProduct): boolean {
+  if (product.variants?.length) {
+    return product.variants.some((variant) => (variant.stock ?? 0) > 0);
+  }
+  if (product.stockQuantity !== undefined) {
+    return product.stockQuantity > 0;
+  }
+  return product.availability !== "out-of-stock";
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 /**
@@ -123,6 +158,10 @@ export function PartPickerModal({
   selectedId,
   selectedVariantValue,
   onSelect,
+  extraFilters,
+  isLoading,
+  inStockOnly = false,
+  onInStockOnlyChange,
 }: PartPickerModalProps) {
   const titleId  = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -189,7 +228,8 @@ export function PartPickerModal({
   // ── Derived filter options ────────────────────────────────────────────────
 
   const brands = useMemo(
-    () => [...new Set(products.map((p) => p.brand))].sort(),
+    () =>
+      [...new Set(products.map((p) => p.brand).filter((b) => b && b.trim().length > 0))].sort(),
     [products]
   );
 
@@ -225,9 +265,11 @@ export function PartPickerModal({
         !selectedPlatforms.includes(p.platform)
       )
         return false;
+      if (inStockOnly && !isProductInStock(p))
+        return false;
       return true;
     });
-  }, [products, searchQuery, selectedBrands, selectedPriceRanges, selectedPlatforms]);
+  }, [products, searchQuery, selectedBrands, selectedPriceRanges, selectedPlatforms, inStockOnly]);
 
   const sorted = useMemo(
     () =>
@@ -248,10 +290,10 @@ export function PartPickerModal({
   // Reset to page 1 on any filter/sort change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedBrands, selectedPriceRanges, selectedPlatforms, sortBy]);
+  }, [searchQuery, selectedBrands, selectedPriceRanges, selectedPlatforms, inStockOnly, sortBy]);
 
   const activeFilterCount =
-    selectedBrands.length + selectedPriceRanges.length + selectedPlatforms.length;
+    selectedBrands.length + selectedPriceRanges.length + selectedPlatforms.length + (inStockOnly ? 1 : 0);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -259,7 +301,8 @@ export function PartPickerModal({
     setSelectedBrands([]);
     setSelectedPriceRanges([]);
     setSelectedPlatforms([]);
-  }, []);
+    onInStockOnlyChange?.(false);
+  }, [onInStockOnlyChange]);
 
   const toggleBrand = useCallback(
     (brand: string) =>
@@ -373,6 +416,7 @@ export function PartPickerModal({
                 aria-label="Bộ lọc sản phẩm"
                 className="w-52 shrink-0 overflow-y-auto px-4 py-4"
               >
+                {extraFilters}
                 {brands.length > 1 && (
                   <FilterGroup title="Nhà sản xuất">
                     {brands.map((brand) => (
@@ -420,7 +464,7 @@ export function PartPickerModal({
                 {/* Topbar: result count + clear filters + sort + pagination */}
                 <div className="flex shrink-0 items-center gap-2 border-b border-secondary-200 px-4 py-2.5">
                   <span className="shrink-0 text-xs text-secondary-500">
-                    {sorted.length} sản phẩm
+                    {isLoading ? "Đang tải…" : `${sorted.length} sản phẩm`}
                   </span>
 
                   <div className="flex-1" />
@@ -436,6 +480,17 @@ export function PartPickerModal({
                   )}
 
                   {/* Sort */}
+                  <div className="shrink-0 flex h-8 items-center">
+                    <Toggle
+                      label="Còn hàng"
+                      checked={inStockOnly}
+                      onChange={(e) => onInStockOnlyChange?.(e.target.checked)}
+                      size="sm"
+                      labelLeft
+                      className="!mb-0 h-8"
+                    />
+                  </div>
+
                   <div className="w-44 shrink-0">
                     <Select
                       options={SORT_OPTIONS}

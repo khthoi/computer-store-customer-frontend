@@ -4,7 +4,6 @@ import { useCallback, useEffect, useId, useState } from "react";
 import { DescriptionTab } from "@/src/components/product/DescriptionTab";
 import { SpecTable } from "@/src/components/product/SpecTable";
 import { ReviewSection } from "@/src/components/product/ReviewSection";
-import { PolicyTabContent } from "@/src/components/product/PolicyTabContent";
 import type { ProductDetail } from "@/src/components/product/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -13,7 +12,7 @@ export interface ProductTabsSectionProps {
   product: ProductDetail;
 }
 
-type TabValue = "description" | "specs" | "reviews" | "policies";
+type TabValue = "description" | "specs" | "reviews";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -51,7 +50,6 @@ export function ProductTabsSection({ product }: ProductTabsSectionProps) {
     { value: "description", label: "Mô tả sản phẩm" },
     { value: "specs", label: "Thông số kỹ thuật" },
     { value: "reviews", label: `Đánh giá (${product.reviewCount})` },
-    { value: "policies", label: "Chính sách" },
   ];
 
   return (
@@ -146,15 +144,6 @@ export function ProductTabsSection({ product }: ProductTabsSectionProps) {
           )}
         </div>
 
-        {/* Policies */}
-        <div
-          id={`${baseId}-panel-policies`}
-          role="tabpanel"
-          aria-labelledby={`${baseId}-tab-policies`}
-          hidden={activeTab !== "policies"}
-        >
-          {activeTab === "policies" && <PolicyTabContent />}
-        </div>
       </div>
     </section>
   );

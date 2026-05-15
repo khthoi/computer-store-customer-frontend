@@ -1,20 +1,40 @@
 import { PromotionsPageInner } from "@/src/components/promotions/PromotionsPageInner";
-import { FLASH_SALE, DEAL_GROUPS, DEAL_CATEGORY_META } from "./_mock_data";
+import { getActiveFlashSale } from "@/src/services/storefront-flash-sale.service";
+import {
+  getActivePromotions,
+  getActivePromotionProducts,
+} from "@/src/services/storefront-promotion.service";
+import type { StorefrontProductCardDto } from "@/src/types/storefront-product-card.types";
 
 export const dynamic = "force-dynamic";
 
-/**
- * /promotions
- *
- * Server component — always fresh (force-dynamic).
- * Passes flash sale event and deal groups to the client inner component.
- */
-export default function PromotionsPage() {
+export const metadata = {
+  title: "Khuyến mãi · PC Store",
+  description:
+    "Tổng hợp khuyến mãi, mã giảm giá và phần thưởng đang diễn ra tại PC Store.",
+};
+
+export default async function PromotionsPage() {
+  const [flashSale, promotions, promotionProducts] = await Promise.all([
+    getActiveFlashSale(),
+    getActivePromotions(),
+    getActivePromotionProducts(48),
+  ]);
+
+  const autoPromotions = promotions.filter((p) => !p.isCoupon);
+
+  const productsByPromotion: Record<number, StorefrontProductCardDto[]> = {};
+  for (const item of promotionProducts.products) {
+    const list = productsByPromotion[item.promotionId] ?? [];
+    list.push(item);
+    productsByPromotion[item.promotionId] = list;
+  }
+
   return (
     <PromotionsPageInner
-      flashSale={FLASH_SALE}
-      dealGroups={DEAL_GROUPS}
-      categoryMeta={DEAL_CATEGORY_META}
+      flashSale={flashSale}
+      promotions={autoPromotions}
+      productsByPromotion={productsByPromotion}
     />
   );
 }

@@ -45,6 +45,7 @@ export function Navbar({ navLinks, mobileLinks, categories }: NavbarProps) {
   const [megaOpen, setMegaOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [shouldMarquee, setShouldMarquee] = useState(false);
+  const [isMarqueePaused, setIsMarqueePaused] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const quickLinksViewportRef = useRef<HTMLDivElement | null>(null);
   const quickLinksTrackRef = useRef<HTMLDivElement | null>(null);
@@ -199,17 +200,17 @@ export function Navbar({ navLinks, mobileLinks, categories }: NavbarProps) {
               <div
                 className="group relative overflow-hidden"
                 aria-label="Liên kết nhanh"
+                onMouseEnter={() => setIsMarqueePaused(true)}
+                onMouseLeave={() => setIsMarqueePaused(false)}
+                onFocusCapture={() => setIsMarqueePaused(true)}
+                onBlurCapture={() => setIsMarqueePaused(false)}
               >
                 <div
                   ref={quickLinksTrackRef}
-                  className={[
-                    "flex items-center gap-6 whitespace-nowrap",
-                    shouldMarquee
-                      ? "min-w-max group-hover:[animation-play-state:paused]"
-                      : "w-full flex-wrap",
-                  ].join(" ")}
+                  className="flex min-w-max flex-nowrap items-center gap-6 whitespace-nowrap"
                   style={shouldMarquee ? {
                     animation: `navbar-marquee ${navMarqueeDuration}s linear infinite`,
+                    animationPlayState: isMarqueePaused ? "paused" : "running",
                   } : undefined}
                 >
                   {navLinks.map((link) => renderNavLink(link))}
@@ -218,13 +219,6 @@ export function Navbar({ navLinks, mobileLinks, categories }: NavbarProps) {
                     : null}
                 </div>
               </div>
-            </div>
-
-            <div className="ml-auto hidden shrink-0 items-center gap-1.5 xl:flex">
-              <SparklesIcon className="h-4 w-4 text-warning-600" />
-              <span className="text-xs font-semibold text-warning-600">
-                Flash Sale hôm nay
-              </span>
             </div>
           </div>
 

@@ -38,6 +38,8 @@ export interface HeaderProps {
   wishlistCount?: number;
   compareCount?: number;
   user?: HeaderUser | null;
+  /** False until AuthProvider has read storage on mount; used to avoid flicker. */
+  isAuthHydrated?: boolean;
   onLogout?: () => void;
   topLinks: StorefrontMenuItem[];
   navLinks: StorefrontMenuItem[];
@@ -127,7 +129,19 @@ function SocialIcons({
   );
 }
 
-function TopBar({ topLinks }: { topLinks: StorefrontMenuItem[] }) {
+function TopBar({
+  topLinks,
+  user,
+  isAuthHydrated,
+  onLogout,
+}: {
+  topLinks: StorefrontMenuItem[];
+  user: HeaderUser | null;
+  isAuthHydrated: boolean;
+  onLogout?: () => void;
+}) {
+  const firstName = user?.name?.split(" ").pop() ?? "";
+
   return (
     <div className="bg-primary-600 text-white">
       <div className="mx-auto flex h-8 max-w-[1450px] items-center justify-between gap-4 px-4">
@@ -152,19 +166,45 @@ function TopBar({ topLinks }: { topLinks: StorefrontMenuItem[] }) {
             </span>
           ))}
           <span className="text-primary-400">|</span>
-          <a
-            href="/login"
-            className="text-primary-100 transition-colors hover:text-white"
-          >
-            Đăng nhập
-          </a>
-          <span className="text-primary-400">/</span>
-          <a
-            href="/register"
-            className="text-primary-100 transition-colors hover:text-white"
-          >
-            Đăng ký
-          </a>
+          {!isAuthHydrated ? (
+            <span className="h-3 w-24" aria-hidden="true" />
+          ) : user ? (
+            <>
+              <span className="hidden text-primary-100 sm:inline cursor-pointer">
+                Xin chào,{" "}
+                <Link
+                  href="/account/profile"
+                  className="font-medium text-white transition-colors hover:text-yellow-200"
+                >
+                  {firstName || user.name}
+                </Link>
+              </span>
+              <span className="text-primary-400">|</span>
+              <button
+                type="button"
+                onClick={onLogout}
+                className="text-primary-100 transition-colors hover:text-white cursor-pointer"
+              >
+                Đăng xuất
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="text-primary-100 transition-colors hover:text-white cursor-pointer"
+              >
+                Đăng nhập
+              </Link>
+              <span className="text-primary-400">/</span>
+              <Link
+                href="/register"
+                className="text-primary-100 transition-colors hover:text-white cursor-pointer"
+              >
+                Đăng ký
+              </Link>
+            </>
+          )}
         </nav>
       </div>
     </div>
@@ -233,7 +273,7 @@ function ActionIcons({
           <button
             type="button"
             onClick={() => setUserMenuOpen((value) => !value)}
-            className="flex flex-col items-center gap-0.5 rounded text-secondary-500 transition-colors hover:text-primary-600"
+            className="flex flex-col items-center gap-0.5 rounded text-secondary-500 transition-colors hover:text-primary-600 cursor-pointer"
           >
             <UserIcon className="h-5 w-5" />
             <span className="max-w-[56px] truncate text-[10px] font-medium leading-none">
@@ -377,6 +417,7 @@ export function Header({
   wishlistCount = 0,
   compareCount = 0,
   user = null,
+  isAuthHydrated = true,
   onLogout,
   topLinks,
   navLinks,
@@ -435,7 +476,14 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-50 w-full">
-      {!scrolled && <TopBar topLinks={topLinks} />}
+      {!scrolled && (
+        <TopBar
+          topLinks={topLinks}
+          user={user}
+          isAuthHydrated={isAuthHydrated}
+          onLogout={onLogout}
+        />
+      )}
 
       <div className="border-b border-secondary-200 bg-white shadow-sm">
         <div
@@ -476,32 +524,37 @@ export function Header({
             <Link
               href="/"
               aria-label="PC Store - Trang chủ"
-              className="flex items-center gap-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+              className="me-5 flex items-center gap-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
             >
               {publicSettings.logoUrl ? (
-                <div className="relative h-9 w-9 overflow-hidden rounded-lg bg-white">
+                <div
+                  className={[
+                    "relative overflow-hidden transition-all duration-300 ease-in-out",
+                    scrolled ? "h-12 w-32" : "h-16 w-40",
+                  ].join(" ")}
+                >
                   <Image
                     src={publicSettings.logoUrl}
                     alt={publicSettings.siteName || "PC Store"}
                     fill
-                    sizes="36px"
-                    className="object-contain"
+                    sizes="192px"
+                    className="object-contain object-right"
                   />
                 </div>
               ) : (
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600 text-sm font-extrabold tracking-tight text-white">
+                <div
+                  className={[
+                    "flex items-center justify-center rounded-lg bg-primary-600 font-extrabold tracking-tight text-white transition-all duration-300 ease-in-out",
+                    scrolled ? "h-12 w-12 text-lg" : "h-16 w-16 text-xl",
+                  ].join(" ")}
+                >
                   PC
                 </div>
               )}
-              <div className="hidden leading-tight sm:block">
-                <p className="text-base font-extrabold tracking-tight text-secondary-900">
-                  {publicSettings.siteName || "TechStore"}
-                </p>
-              </div>
             </Link>
           </div>
 
-          <div className="flex flex-1 justify-center px-2">
+          <div className="flex flex-1 min-w-0">
             <SearchBar size="default" shortcutItems={searchShortcuts} />
           </div>
 

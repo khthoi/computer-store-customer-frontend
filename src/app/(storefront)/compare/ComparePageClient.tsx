@@ -6,6 +6,7 @@ import { CompareBar } from "@/src/components/compare-ui/CompareBar";
 import { CompareHeaderCardList } from "@/src/components/compare-ui/CompareHeaderCardList";
 import { CompareTable } from "@/src/components/compare-ui/CompareTable";
 import { CompareProductDrawer } from "@/src/components/compare-ui/CompareProductDrawer";
+import { CompareDataBridge } from "@/src/components/compare-ui/CompareDataBridge";
 import { EmptyCompareState } from "@/src/components/compare-ui/EmptyCompareState";
 import { useCompare } from "@/src/store/compare.store";
 import {
@@ -33,6 +34,9 @@ export function ComparePageClient({
 
   return (
     <div className="min-h-screen bg-secondary-50 max-w-[1400px] mx-auto flex flex-col">
+      {/* ── Lazy spec hydrator ── */}
+      <CompareDataBridge catalogue={catalogue} />
+
       {/* ── Sticky compare bar ── */}
       <CompareBar />
 

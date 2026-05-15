@@ -136,9 +136,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       {label && (
         <label
           htmlFor={id}
-          className="mb-1 block text-sm font-medium text-secondary-700"
+          className="mb-1 inline-block text-sm font-medium text-secondary-700"
         >
           {label}
+          {rest.required && (
+            <span className="ml-0.5 text-error-600" aria-hidden="true">
+              *
+            </span>
+          )}
         </label>
       )}
 

@@ -60,6 +60,7 @@ export interface SelectProps {
    */
   clearable?: boolean;
   disabled?: boolean;
+  required?: boolean;
   label?: string;
   helperText?: string;
   errorMessage?: string;
@@ -210,6 +211,7 @@ export function Select({
   multiple = false,
   clearable = false,
   disabled = false,
+  required = false,
   label,
   helperText,
   errorMessage,
@@ -399,9 +401,14 @@ export function Select({
       {label && (
         <label
           htmlFor={id}
-          className="mb-1 block text-sm font-medium text-secondary-700"
+          className="mb-1 inline-block text-sm font-medium text-secondary-700"
         >
           {label}
+          {required && (
+            <span className="ml-0.5 text-error-600" aria-hidden="true">
+              *
+            </span>
+          )}
         </label>
       )}
 

@@ -559,7 +559,7 @@ function SectionBlock({
  *
  * ```tsx
  * <SidebarMegaMenu
- *   categories={STORE_MEGA_MENU}
+ *   categories={toSidebarCategories(categoryTree)}
  *   defaultActiveId="laptop-gaming"
  *   height={480}
  * />

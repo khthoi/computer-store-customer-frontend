@@ -10,7 +10,7 @@ import type {
   FilterDefinition,
   FilterState,
   FilterValue,
-} from "@/src/app/(storefront)/products/demo/_config";
+} from "@/src/app/(storefront)/products/_config";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -35,6 +35,10 @@ export interface SearchFiltersPanelProps {
   definitions: FilterDefinition[];
   value: FilterState;
   onChange: (next: FilterState) => void;
+  /** Called when user clicks "Áp dụng bộ lọc" */
+  onApply?: () => void;
+  /** Whether draft differs from applied state */
+  hasChanges?: boolean;
 }
 
 // ─── Filter item renderer ─────────────────────────────────────────────────────
@@ -183,6 +187,8 @@ export function SearchFiltersPanel({
   definitions,
   value,
   onChange,
+  onApply,
+  hasChanges = false,
 }: SearchFiltersPanelProps) {
   const isActive = hasActiveFilters(value);
 
@@ -210,10 +216,10 @@ export function SearchFiltersPanel({
 
   return (
     <div className="space-y-3">
-      {/* Clear all */}
-      {isActive && (
-        <div className="flex items-center justify-between px-1">
-          <p className="text-sm font-semibold text-secondary-700">Bộ lọc</p>
+      {/* Header row */}
+      <div className="flex items-center justify-between px-1">
+        <p className="text-sm font-semibold text-secondary-700">Bộ lọc</p>
+        {isActive && (
           <Button
             variant="ghost"
             size="sm"
@@ -221,8 +227,8 @@ export function SearchFiltersPanel({
           >
             Xóa bộ lọc
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       <Accordion
         items={items}
@@ -230,6 +236,21 @@ export function SearchFiltersPanel({
         variant="ghost"
         defaultValue={definitions.map((d) => d.key)}
       />
+
+      {/* Apply button — only shown when there are unsaved changes */}
+      {onApply && (
+        <div className="pt-1">
+          <Button
+            variant="primary"
+            size="sm"
+            className="w-full"
+            onClick={onApply}
+            disabled={!hasChanges}
+          >
+            {hasChanges ? "Áp dụng bộ lọc" : "Đã áp dụng"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

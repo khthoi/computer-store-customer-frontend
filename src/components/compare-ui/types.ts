@@ -46,7 +46,7 @@ export interface CompareSpecGroup {
 export interface CompareProduct {
   id: string;
   name: string;
-  brand: string;
+  brands: string[];
   slug: string;
   category: ProductCategory;
   currentPrice: number;
@@ -74,7 +74,7 @@ export interface ProductVariant {
 export interface CatalogueProduct {
   id: string;
   name: string;
-  brand: string;
+  brands: string[];
   slug: string;
   category: ProductCategory;
   currentPrice: number;

@@ -807,4 +807,27 @@
     100% { background-position: -200% 0; }
   }
 
+  .marquee-track {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    width: max-content;
+    min-width: max-content;
+    will-change: transform;
+    animation: announcement-marquee 18s linear infinite;
+  }
+
+  .announcement-marquee-copy,
+  .announcement-marquee-copy > * {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    margin: 0;
+  }
+
+  @keyframes announcement-marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
 } /* end @layer components */

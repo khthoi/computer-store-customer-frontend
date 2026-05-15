@@ -61,7 +61,7 @@ function buildVariantCompareProduct(
       isMultiVariant && variant
         ? `${product.name} · ${variant.label}`
         : product.name,
-    brand: product.brand,
+    brands: product.brands,
     slug: product.slug,
     category: product.category,
     currentPrice: variant?.currentPrice ?? product.currentPrice,
@@ -98,9 +98,13 @@ export function CompareProductDrawer({
     const maxVal = maxPrice ? parseInt(maxPrice, 10) : null;
 
     return catalogue.filter((p) => {
-      if (q && !p.name.toLowerCase().includes(q) && !p.brand.toLowerCase().includes(q))
+      if (
+        q &&
+        !p.name.toLowerCase().includes(q) &&
+        !p.brands.some((b) => b.toLowerCase().includes(q))
+      )
         return false;
-      if (selectedBrand !== "Tất cả" && p.brand !== selectedBrand)
+      if (selectedBrand !== "Tất cả" && !p.brands.includes(selectedBrand))
         return false;
       if (minVal !== null && p.currentPrice < minVal * 1_000_000) return false;
       if (maxVal !== null && p.currentPrice > maxVal * 1_000_000) return false;
@@ -369,9 +373,11 @@ function DrawerProductItem({
         </Tooltip>
 
         <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-          <Badge variant="default" size="sm">
-            {product.brand}
-          </Badge>
+          {product.brands.map((b) => (
+            <Badge key={b} variant="default" size="sm">
+              {b}
+            </Badge>
+          ))}
           <Badge variant="info" size="sm">
             {CATEGORY_LABELS[product.category]}
           </Badge>

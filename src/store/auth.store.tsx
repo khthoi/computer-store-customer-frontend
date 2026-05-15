@@ -14,6 +14,7 @@ import type { AuthModalMode, AuthUser } from "@/src/types/auth.types";
 
 const LS_USER_KEY = "auth_user";
 const COOKIE_TOKEN = "auth_token";
+const MOJIBAKE_PATTERN = /(?:Ã.|Â.|Ä.|Å.|Æ.|Ð.|Ñ.|á[\u0080-\u00BF]|â[\u0080-\u00BF])/u;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -127,10 +128,31 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
 
+function normalizePossiblyMojibakeText(value: string): string {
+  if (!value || !MOJIBAKE_PATTERN.test(value)) {
+    return value;
+  }
+
+  try {
+    const bytes = Uint8Array.from(value, (char) => char.charCodeAt(0) & 0xff);
+    const decoded = new TextDecoder("utf-8").decode(bytes);
+    return decoded.includes("\uFFFD") ? value : decoded;
+  } catch {
+    return value;
+  }
+}
+
+function normalizeAuthUser(user: AuthUser): AuthUser {
+  return {
+    ...user,
+    name: normalizePossiblyMojibakeText(user.name),
+  };
+}
+
 function readStoredUser(): AuthUser | null {
   try {
     const raw = localStorage.getItem(LS_USER_KEY) ?? sessionStorage.getItem(LS_USER_KEY);
-    if (raw) return JSON.parse(raw) as AuthUser;
+    if (raw) return normalizeAuthUser(JSON.parse(raw) as AuthUser);
   } catch {}
   return null;
 }
@@ -138,7 +160,7 @@ function readStoredUser(): AuthUser | null {
 function writeUser(user: AuthUser, rememberMe: boolean): void {
   const storage = rememberMe ? localStorage : sessionStorage;
   try {
-    storage.setItem(LS_USER_KEY, JSON.stringify(user));
+    storage.setItem(LS_USER_KEY, JSON.stringify(normalizeAuthUser(user)));
     // Also clear the other storage so there's no stale data
     if (rememberMe) sessionStorage.removeItem(LS_USER_KEY);
     else localStorage.removeItem(LS_USER_KEY);
@@ -176,10 +198,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     (user: AuthUser, accessToken: string, rememberMe = false) => {
-      writeUser(user, rememberMe);
+      const normalizedUser = normalizeAuthUser(user);
+      writeUser(normalizedUser, rememberMe);
       const maxAge = rememberMe ? 30 * 24 * 60 * 60 : undefined;
       setCookie(COOKIE_TOKEN, accessToken, maxAge);
-      dispatch({ type: "LOGIN", payload: user });
+      dispatch({ type: "LOGIN", payload: normalizedUser });
     },
     []
   );

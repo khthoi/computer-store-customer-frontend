@@ -107,7 +107,7 @@ export function RegisterPageInner({
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="w-full max-w-lg">
+    <div className={showBrand ? "w-full max-w-lg" : "w-full"}>
       {showBrand && (
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-bold text-secondary-900">Tạo tài khoản</h1>
@@ -200,17 +200,10 @@ export function RegisterPageInner({
       <p className="mt-3 text-center text-xs text-secondary-400">
         Bằng cách đăng ký, bạn đồng ý với{" "}
         <Link
-          href="/terms"
+          href={ROUTES.staticPage("terms")}
           className="text-primary-600 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary-500 rounded"
         >
           Điều khoản sử dụng
-        </Link>{" "}
-        và{" "}
-        <Link
-          href="/privacy"
-          className="text-primary-600 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary-500 rounded"
-        >
-          Chính sách bảo mật
         </Link>
         .
       </p>

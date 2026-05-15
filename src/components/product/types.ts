@@ -44,6 +44,7 @@ export interface ProductDetail {
   id: string;
   name: string;
   brand: string;
+  brands: string[];
   sku: string;
   slug: string;
   currentPrice: number;

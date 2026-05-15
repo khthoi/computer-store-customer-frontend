@@ -196,7 +196,7 @@ export default function ChinhSachDoiTraPage() {
           <li className="flex gap-2"><span className="text-primary-600 shrink-0">•</span>Hotline: <strong>1800 6868</strong> (miễn phí, 8:00–22:00 mỗi ngày)</li>
           <li className="flex gap-2"><span className="text-primary-600 shrink-0">•</span>Email: <strong>returns@techstore.vn</strong></li>
           <li className="flex gap-2"><span className="text-primary-600 shrink-0">•</span>Yêu cầu đổi trả: <Link href={ROUTES.account.returns} className="text-primary-600 hover:underline">Tài khoản → Đơn trả hàng</Link></li>
-          <li className="flex gap-2"><span className="text-primary-600 shrink-0">•</span>Xem <Link href={ROUTES.chinhSachBaoHanh} className="text-primary-600 hover:underline">Chính sách bảo hành</Link> để biết thêm về quyền lợi bảo hành</li>
+          <li className="flex gap-2"><span className="text-primary-600 shrink-0">•</span>Xem <Link href={ROUTES.staticPage("chinh-sach-bao-hanh")} className="text-primary-600 hover:underline">Chính sách bảo hành</Link> để biết thêm về quyền lợi bảo hành</li>
         </ul>
       </section>
     </div>

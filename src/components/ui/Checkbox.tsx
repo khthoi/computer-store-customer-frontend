@@ -207,7 +207,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
                 <label
                   htmlFor={id}
                   className={[
-                    "block font-medium text-secondary-800",
+                    "inline-block font-medium text-secondary-800",
                     TEXT[size],
                     disabled ? "cursor-not-allowed" : "cursor-pointer",
                   ].join(" ")}

@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import Image from "next/image";
-import { PlusCircleIcon } from "@heroicons/react/24/outline";
+import { PlusCircleIcon, Squares2X2Icon } from "@heroicons/react/24/outline";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { Badge } from "@/src/components/ui/Badge";
 import { Select } from "@/src/components/ui/Select";
@@ -15,6 +15,12 @@ import type { CompatibilityStatus } from "@/src/components/buildpc/PCPartCard";
 export interface ProductVariant {
   value: string;
   label: string;
+  /** Per-variant stock — shown in the Select option and used to recompute availability */
+  stock?: number;
+  /** Per-variant sale price — overrides product-level price when this variant is selected */
+  price?: number;
+  /** Per-variant original price — overrides product-level original price */
+  originalPrice?: number;
 }
 
 export interface PartPickerProductItemProps {
@@ -131,18 +137,45 @@ export function PartPickerProductItem({
   href,
 }: PartPickerProductItemProps) {
   // Initialise from the build's stored variant so the Select shows the right value on open.
-  const [selectedVariant, setSelectedVariant] = useState(selectedVariantValue ?? "");
+  // When no build-stored variant, default to the first variant (if any) so the buyer
+  // never sees a blank "Chọn phiên bản" placeholder for a single-variant product.
+  const [selectedVariant, setSelectedVariant] = useState(
+    selectedVariantValue ?? variants?.[0]?.value ?? "",
+  );
 
   const hasVariants = variants !== undefined && variants.length > 0;
+  const variantCount = variants?.length ?? 0;
+  const activeVariant = hasVariants
+    ? variants!.find((v) => v.value === selectedVariant)
+    : undefined;
+
+  // Per-variant price / stock override product-level values when a variant is picked.
+  const displayPrice = activeVariant?.price ?? price;
+  const displayOriginalPrice = activeVariant?.originalPrice ?? originalPrice;
+  const variantStock = activeVariant?.stock;
+  const displayStockQuantity = variantStock ?? stockQuantity;
+  const displayAvailability: PartPickerProductItemProps["availability"] =
+    variantStock !== undefined
+      ? variantStock <= 0
+        ? "out-of-stock"
+        : variantStock <= 5
+          ? "limited"
+          : "in-stock"
+      : availability;
 
   // ✓ when: product is in the build AND variant matches (or there are no variants).
   const buildVariant       = selectedVariantValue ?? "";
   const isVariantUnchanged = !hasVariants || selectedVariant === buildVariant;
   const showCheckmark      = isSelected && isVariantUnchanged;
 
-  // + button is active when: not incompatible AND (already selected OR variant not required OR variant chosen).
+  // + button is active when: not incompatible AND variant in stock (if known) AND
+  // (already selected OR no variants OR a variant has been chosen).
   const isIncompatible = compatibilityStatus === "incompatible";
-  const canAdd         = !isIncompatible && (isSelected || !hasVariants || selectedVariant !== "");
+  const variantOutOfStock = variantStock !== undefined && variantStock <= 0;
+  const canAdd =
+    !isIncompatible &&
+    !variantOutOfStock &&
+    (isSelected || !hasVariants || selectedVariant !== "");
 
   const handleSelect = useCallback(
     () => onSelect?.(id, selectedVariant || undefined),
@@ -179,9 +212,20 @@ export function PartPickerProductItem({
 
       {/* Info — brand, name, warranty + variant Select (same row), availability */}
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-secondary-400">
-          {brand}
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-secondary-400">
+            {brand}
+          </p>
+          {variantCount > 1 && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full border border-primary-200 bg-primary-50 px-1.5 py-0.5 text-[10px] font-medium text-primary-700"
+              title={`Sản phẩm có ${variantCount} phiên bản với mức giá và tồn kho khác nhau`}
+            >
+              <Squares2X2Icon className="h-3 w-3" aria-hidden="true" />
+              {variantCount} phiên bản
+            </span>
+          )}
+        </div>
 
         <Tooltip content={name} placement="top-start">
           {href ? (
@@ -213,7 +257,7 @@ export function PartPickerProductItem({
             )}
 
             {hasVariants && (
-              <div className="w-44">
+              <div className="max-w-90 flex-1">
                 <Select
                   options={variants!.map((v) => ({ value: v.value, label: v.label }))}
                   value={selectedVariant}
@@ -226,12 +270,15 @@ export function PartPickerProductItem({
           </div>
         )}
 
-        <AvailabilityBadge availability={availability} stockQuantity={stockQuantity} />
+        <AvailabilityBadge
+          availability={displayAvailability}
+          stockQuantity={displayStockQuantity}
+        />
       </div>
 
       {/* Right column: price + icon-only action button */}
       <div className="flex shrink-0 flex-col items-end justify-between self-stretch gap-3 mr-4 mt-5">
-        <PriceTag currentPrice={price} originalPrice={originalPrice} size="sm" />
+        <PriceTag currentPrice={displayPrice} originalPrice={displayOriginalPrice} size="sm" />
 
         {/* Icon-only button — ✓ when variant matches build, + otherwise */}
         <button
@@ -247,6 +294,8 @@ export function PartPickerProductItem({
           title={
             showCheckmark
               ? "Đã thêm vào build"
+              : variantOutOfStock
+              ? "Phiên bản này đã hết hàng"
               : !canAdd && hasVariants
               ? "Vui lòng chọn phiên bản trước"
               : isSelected

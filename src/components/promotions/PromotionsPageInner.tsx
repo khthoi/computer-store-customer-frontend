@@ -1,87 +1,62 @@
-"use client";
-
-import { useState } from "react";
-import { Tabs, TabPanel, type TabItem } from "@/src/components/ui/Tabs";
+import { BoltIcon } from "@heroicons/react/24/solid";
 import { FlashSaleBanner } from "./FlashSaleBanner";
-import { DealSection } from "./DealSection";
-import { PromotionHeroBanner } from "./PromotionHeroBanner";
-import type {
-  FlashSaleEvent,
-  DealGroup,
-  DealCategoryMeta,
-  DealCategory,
-} from "@/src/app/(storefront)/promotions/_mock_data";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import { ActivePromotionsList } from "./ActivePromotionsList";
+import type { StorefrontFlashSaleResponse } from "@/src/types/storefront-homepage-section.types";
+import type { Promotion } from "@/src/types/promotion.types";
+import type { StorefrontProductCardDto } from "@/src/types/storefront-product-card.types";
 
 export interface PromotionsPageInnerProps {
-  flashSale: FlashSaleEvent;
-  dealGroups: DealGroup[];
-  categoryMeta: DealCategoryMeta[];
+  flashSale: StorefrontFlashSaleResponse;
+  promotions: Promotion[];
+  productsByPromotion: Record<number, StorefrontProductCardDto[]>;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+function FlashSaleEmpty() {
+  return (
+    <section className="py-10 max-w-[1450px] mx-auto">
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-5 flex items-center gap-2">
+          <BoltIcon className="h-6 w-6 text-orange-500" aria-hidden="true" />
+          <h2 className="text-xl font-bold text-secondary-900">Flash Sale</h2>
+        </div>
+        <p className="rounded-xl border border-dashed border-secondary-200 bg-secondary-50 px-4 py-12 text-center text-sm text-secondary-500">
+          Hiện chưa có chương trình Flash Sale nào đang diễn ra. Hãy quay lại
+          sớm để săn ưu đãi nhé!
+        </p>
+      </div>
+    </section>
+  );
+}
 
 /**
- * PromotionsPageInner — client root for /promotions.
+ * PromotionsPageInner — content for the /promotions tab.
  *
- * Layout sections (top to bottom):
- *  1. PromotionHeroBanner — asymmetric hero + sub-banners (owns its own data)
- *  2. Flash Sale section (countdown + product carousel)
- *  3. Deals by category (line tab bar + per-category carousel)
+ * Banner + sub-navigation are rendered by the shared layout
+ * (app/(storefront)/promotions/layout.tsx) and persist across tab switches.
  */
 export function PromotionsPageInner({
   flashSale,
-  dealGroups,
-  categoryMeta,
+  promotions,
+  productsByPromotion,
 }: PromotionsPageInnerProps) {
-  const [activeCategory, setActiveCategory] = useState<DealCategory>(
-    categoryMeta[0].value
-  );
-
-  const tabItems: TabItem[] = categoryMeta.map((meta) => ({
-    value: meta.value,
-    label: meta.label,
-  }));
+  const hasFlashSale =
+    flashSale.flashSale != null && flashSale.products.length > 0;
 
   return (
     <>
-      {/* ── 1. Hero banners ───────────────────────────────────────────────── */}
-      <PromotionHeroBanner />
+      {hasFlashSale ? (
+        <FlashSaleBanner
+          flashSale={flashSale.flashSale!}
+          products={flashSale.products}
+        />
+      ) : (
+        <FlashSaleEmpty />
+      )}
 
-      {/* ── 2. Flash Sale ─────────────────────────────────────────────────── */}
-      <FlashSaleBanner flashSale={flashSale} />
-
-      {/* ── 3. Deals by category ──────────────────────────────────────────── */}
-      <section className="py-10 flex max-w-[1450px] mx-auto">
-        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="mb-5 text-xl font-bold text-secondary-900">
-            Ưu đãi theo danh mục
-          </h2>
-
-          <Tabs
-            tabs={tabItems}
-            value={activeCategory}
-            onChange={(v) => setActiveCategory(v as DealCategory)}
-            variant="line"
-          >
-            {categoryMeta.map((meta) => {
-              const group = dealGroups.find((g) => g.category === meta.value);
-              return (
-                <TabPanel key={meta.value} value={meta.value}>
-                  {group && group.products.length > 0 ? (
-                    <DealSection products={group.products} />
-                  ) : (
-                    <p className="py-12 text-center text-sm text-secondary-400">
-                      Không có ưu đãi trong danh mục này.
-                    </p>
-                  )}
-                </TabPanel>
-              );
-            })}
-          </Tabs>
-        </div>
-      </section>
+      <ActivePromotionsList
+        promotions={promotions}
+        productsByPromotion={productsByPromotion}
+      />
     </>
   );
 }

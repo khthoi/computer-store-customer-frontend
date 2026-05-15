@@ -1,4 +1,8 @@
 import type { StorefrontBanner } from "@/src/types/storefront-home.types";
+import type {
+  StorefrontAnnouncementBar,
+  StorefrontPopup,
+} from "@/src/types/announcement.types";
 
 export type StorefrontMenuPosition =
   | "header_top"
@@ -52,8 +56,6 @@ export interface FooterLinkColumnConfig {
 export interface FooterConfigData {
   brand: {
     logoUrl: string;
-    logoAlt: string;
-    storeName: string;
     description: string;
   };
   contact: {
@@ -112,4 +114,6 @@ export interface StorefrontLayoutData {
   footerConfig: FooterConfigData;
   categoryTree: StorefrontCategoryNode[];
   searchShortcuts: SearchShortcutItem[];
+  activePopups: StorefrontPopup[];
+  activeAnnouncementBars: StorefrontAnnouncementBar[];
 }

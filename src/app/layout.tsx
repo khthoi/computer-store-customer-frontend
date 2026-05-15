@@ -5,6 +5,10 @@ import { Footer } from "@/src/components/layout/Footer";
 import { MainContent } from "@/src/components/layout/MainContent";
 import { SideBannersConditional } from "@/src/components/layout/SideBannersConditional";
 import { ConnectedHeader } from "@/src/components/layout/ConnectedHeader";
+import {
+  AnnouncementBarStack,
+  PopupHost,
+} from "@/src/components/layout/announcements";
 import { Providers } from "./providers";
 import { getStorefrontLayoutData } from "@/src/services/storefront-layout.service";
 
@@ -55,6 +59,11 @@ export default async function RootLayout({
     <html lang="vi" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="antialiased bg-secondary-50">
         <Providers>
+          <AnnouncementBarStack
+            bars={layoutData.activeAnnouncementBars}
+            position="top"
+          />
+
           {/* ConnectedHeader reads from AuthProvider + CartProvider context */}
           <ConnectedHeader layoutData={layoutData} />
 
@@ -69,6 +78,13 @@ export default async function RootLayout({
           </div>
 
           <Footer config={layoutData.footerConfig} menus={layoutData.footerMenus} />
+
+          <AnnouncementBarStack
+            bars={layoutData.activeAnnouncementBars}
+            position="bottom"
+          />
+
+          <PopupHost popups={layoutData.activePopups} />
         </Providers>
       </body>
     </html>

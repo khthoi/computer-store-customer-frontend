@@ -35,7 +35,6 @@ Core modules: Auth · Catalog · Product Detail · Build PC · Cart · Checkout 
               Orders · Wishlist · Reviews · Support Tickets · Promotions
 
 Screen IDs (CS-01 to CS-20) are defined in .ai/FEATURE_SPEC.md.
-Business rules (stock checks, compatibility, cancel rules) are in .ai/PROJECT_CONTEXT.md.
 
 ---
 
@@ -171,5 +170,3 @@ Self-review before committing:
 | .ai/DESIGN_SYSTEM.md     | Before writing any Tailwind classes         |
 | .ai/API_CONTRACT.md         | Before calling any backend endpoint         |
 | .ai/COMPONENT_GUIDELINES.md | Before creating any new component           |
-| .ai/FOLDER_STRUCTURE.md     | Before adding new files — placement guide   |
-| .ai/PROJECT_CONTEXT.md      | For business rules, user roles, screen IDs  |

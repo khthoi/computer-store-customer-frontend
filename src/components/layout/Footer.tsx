@@ -27,6 +27,26 @@ function LinkedinIcon({ className }: { className?: string }) {
   return <FaLinkedinIn className={className} />;
 }
 
+function ZaloIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
+      <path
+        d="M6.25 4.75h11.5a2.5 2.5 0 0 1 2.5 2.5v6.9a2.5 2.5 0 0 1-2.5 2.5H11.4l-3.65 3.08c-.73.62-1.85.1-1.85-.86V16.65h-.65a2.5 2.5 0 0 1-2.5-2.5v-6.9a2.5 2.5 0 0 1 2.5-2.5Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M7.7 9.2h4.45l-4.45 4.55h4.6M13.65 9.2v4.55M16.55 9.2v4.55h2.05"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 const SOCIAL_ICON_MAP = {
   facebook: FacebookIcon,
   youtube: YouTubeIcon,
@@ -34,7 +54,7 @@ const SOCIAL_ICON_MAP = {
   tiktok: TikTokIcon,
   twitter: TwitterIcon,
   linkedin: LinkedinIcon,
-  zalo: FacebookIcon,
+  zalo: ZaloIcon,
 } as const;
 
 const PAYMENT_METHODS = [
@@ -108,16 +128,22 @@ export function Footer({ config, menus }: FooterProps) {
 
   return (
     <footer className="bg-secondary-900 text-secondary-400">
-      <div className="mx-auto flex max-w-[1450px] px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mx-auto max-w-[1450px] px-4 py-12 sm:px-6 lg:px-8">
+        <div className="grid w-full grid-cols-1 gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-5">
           <div>
-            <Link href="/" className="mb-5 flex items-center gap-2.5 focus-visible:outline-none">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600 text-sm font-extrabold text-white shadow-md">
-                PC
-              </div>
-              <span className="text-base font-extrabold text-white">
-                {config.brand.storeName}
-              </span>
+            <Link href="/" className="mb-5 inline-flex items-center focus-visible:outline-none">
+              {config.brand.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={config.brand.logoUrl}
+                  alt="PC Store"
+                  className="h-16 w-auto object-contain"
+                />
+              ) : (
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-600 text-lg font-extrabold text-white shadow-md">
+                  PC
+                </div>
+              )}
             </Link>
 
             <p className="mb-5 text-sm leading-relaxed text-white/60">
@@ -144,7 +170,9 @@ export function Footer({ config, menus }: FooterProps) {
                 )}
               </div>
             )}
+          </div>
 
+          <div>
             {columnOne && (
               <>
                 <FooterHeading>{columnOne.title}</FooterHeading>
@@ -235,10 +263,9 @@ export function Footer({ config, menus }: FooterProps) {
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
             <p className="my-auto text-center text-xs text-white/40 sm:text-left">
               {config.copyright}
-              {config.bottomLinks.length > 0 && " "}
-              {config.bottomLinks.map((link, index) => (
+              {config.bottomLinks.map((link) => (
                 <span key={`${link.label}-${link.url}`}>
-                  {index === 0 ? "" : " · "}
+                  {" · "}
                   <Link href={link.url} className="transition-colors hover:text-white/70">
                     {link.label}
                   </Link>

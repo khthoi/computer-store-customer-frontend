@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Input } from "@/src/components";
-import { Textarea } from "@/src/components";
-import { Button } from "@/src/components";
-import { Select } from "@/src/components";
+import { useEffect, useState } from "react";
+import { Input, Textarea, Button, Select } from "@/src/components";
+import {
+  getContactQuota,
+  submitContactMessage,
+  type ContactQuota,
+} from "@/src/services/contact-message.service";
 
 interface ContactFormValues {
   fullName: string;
@@ -15,6 +17,14 @@ interface ContactFormValues {
 }
 
 type FormErrors = Partial<Record<keyof ContactFormValues, string>>;
+
+const INITIAL_VALUES: ContactFormValues = {
+  fullName: "",
+  email: "",
+  phone: "",
+  subject: "",
+  message: "",
+};
 
 const SUBJECT_OPTIONS = [
   { value: "tu-van-san-pham", label: "Tư vấn sản phẩm / cấu hình" },
@@ -46,15 +56,25 @@ function validate(values: ContactFormValues): FormErrors {
 }
 
 export function ContactForm() {
-  const [values, setValues] = useState<ContactFormValues>({
-    fullName: "",
-    email: "",
-    phone: "",
-    subject: "",
-    message: "",
-  });
+  const [values, setValues] = useState<ContactFormValues>(INITIAL_VALUES);
   const [errors, setErrors] = useState<FormErrors>({});
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [quota, setQuota] = useState<ContactQuota | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getContactQuota()
+      .then((q) => {
+        if (!cancelled) setQuota(q);
+      })
+      .catch(() => {
+        // Silent — UI will still allow submission; server will reject if over quota.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function handleChange(field: keyof ContactFormValues) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -71,49 +91,96 @@ export function ContactForm() {
       return;
     }
     setStatus("loading");
-    // Simulated submission — replace with real API call
-    await new Promise((r) => setTimeout(r, 1200));
-    setStatus("success");
+    setServerError(null);
+    try {
+      const result = await submitContactMessage({
+        fullName: values.fullName.trim(),
+        email: values.email.trim(),
+        phone: values.phone.trim() || undefined,
+        subject: values.subject,
+        message: values.message.trim(),
+      });
+      setQuota(result.quota);
+      setStatus("success");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Gửi tin nhắn thất bại. Vui lòng thử lại.";
+      setServerError(message);
+      setStatus("error");
+      try {
+        const fresh = await getContactQuota();
+        setQuota(fresh);
+      } catch {
+        /* ignore */
+      }
+    }
   }
+
+  const remaining = quota?.remaining ?? null;
+  const max = quota?.max ?? 2;
+  const blocked = remaining !== null && remaining <= 0;
 
   if (status === "success") {
     return (
-      <div className="rounded-xl border border-success-200 bg-success-50 p-8 text-center">
-        <p className="text-3xl mb-3">✓</p>
-        <h3 className="text-lg font-semibold text-success-800 mb-2">Gửi thành công!</h3>
-        <p className="text-success-700 text-sm">
+      <div className="rounded-lg border border-secondary-200 p-6">
+        <h3 className="text-base font-semibold text-secondary-900 mb-2">
+          Đã gửi tin nhắn
+        </h3>
+        <p className="text-sm text-secondary-600 mb-1">
           Chúng tôi đã nhận được tin nhắn của bạn và sẽ phản hồi trong vòng 1–2 giờ làm việc.
         </p>
-        <button
-          onClick={() => {
-            setStatus("idle");
-            setValues({ fullName: "", email: "", phone: "", subject: "", message: "" });
-          }}
-          className="mt-4 text-sm text-success-700 underline hover:no-underline"
-        >
-          Gửi tin nhắn khác
-        </button>
+        {quota && (
+          <p className="text-sm text-secondary-500">
+            Số lần gửi còn lại trong phiên này: {quota.remaining}/{quota.max}.
+          </p>
+        )}
+        {quota && quota.remaining > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              setStatus("idle");
+              setValues(INITIAL_VALUES);
+              setErrors({});
+            }}
+            className="mt-4 text-sm text-primary-600 underline hover:no-underline"
+          >
+            Gửi tin nhắn khác
+          </button>
+        )}
       </div>
     );
   }
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-5">
+      <div className="flex items-center justify-between text-sm text-secondary-500">
+        <span>Các trường có dấu sao bắt buộc nhập.</span>
+        {remaining !== null && (
+          <span aria-live="polite">
+            Số lần gửi còn lại: <span className="font-medium text-secondary-700">{remaining}/{max}</span>
+          </span>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <Input
-          label="Họ và tên *"
+          label="Họ và tên"
           placeholder="Nguyễn Văn A"
           value={values.fullName}
           onChange={handleChange("fullName")}
           errorMessage={errors.fullName}
+          required
+          autoComplete="name"
         />
         <Input
-          label="Email *"
+          label="Email"
           type="email"
           placeholder="email@example.com"
           value={values.email}
           onChange={handleChange("email")}
           errorMessage={errors.email}
+          required
+          autoComplete="email"
         />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -123,39 +190,48 @@ export function ContactForm() {
           value={values.phone}
           onChange={handleChange("phone")}
           errorMessage={errors.phone}
+          autoComplete="tel"
         />
         <Select
-          label="Chủ đề *"
+          label="Chủ đề"
+          required
           options={SUBJECT_OPTIONS}
           value={values.subject}
           onChange={(v) => {
             setValues((prev) => ({ ...prev, subject: v as string }));
             if (errors.subject) setErrors((prev) => ({ ...prev, subject: undefined }));
           }}
-          placeholder="Chọn chủ đề..."
+          placeholder="Chọn chủ đề"
           errorMessage={errors.subject}
         />
       </div>
       <Textarea
-        label="Nội dung *"
-        placeholder="Mô tả chi tiết vấn đề hoặc câu hỏi của bạn..."
+        label="Nội dung"
+        placeholder="Mô tả chi tiết vấn đề hoặc câu hỏi của bạn"
         value={values.message}
         onChange={handleChange("message")}
         errorMessage={errors.message}
+        required
         autoResize
         showCharCount
         maxCount={1000}
       />
-      {status === "error" && (
-        <p className="text-sm text-error-600">
-          Gửi tin nhắn thất bại. Vui lòng thử lại hoặc liên hệ trực tiếp qua email.
+
+      {status === "error" && serverError && (
+        <p className="text-sm text-error-600">{serverError}</p>
+      )}
+      {blocked && (
+        <p className="text-sm text-warning-700">
+          Bạn đã đạt giới hạn {max} lần gửi trong phiên này. Vui lòng quay lại sau.
         </p>
       )}
+
       <Button
         type="submit"
         variant="primary"
         size="lg"
         isLoading={status === "loading"}
+        disabled={blocked}
         className="w-full"
       >
         Gửi tin nhắn
