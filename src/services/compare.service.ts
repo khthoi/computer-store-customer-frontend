@@ -6,11 +6,18 @@
  */
 
 import { storefrontApiFetch } from "@/src/services/storefront-api.service";
+import {
+  getCategoryTreeIndex,
+  resolveCategoryRoot,
+} from "@/src/services/category-tree.service";
 import type {
   CatalogueProduct,
+  CompareBrand,
+  CompareFacetGroup,
   CompareProduct,
+  CompareSearchParams,
+  CompareSearchResult,
   CompareSpecGroup,
-  ProductCategory,
   ProductVariant,
 } from "@/src/components/compare-ui/types";
 import type {
@@ -60,39 +67,6 @@ interface BackendListResponse {
   totalPages: number;
 }
 
-// ─── Category slug → frontend ProductCategory literal ──────────────────────
-
-const CATEGORY_SLUG_TO_FRONTEND: Record<string, ProductCategory> = {
-  laptop: "laptop",
-  "laptop-gaming": "laptop",
-  "laptop-van-phong": "laptop",
-  "laptop-do-hoa": "laptop",
-  "may-tinh-ban": "pc",
-  pc: "pc",
-  "pc-gaming": "pc",
-  "card-man-hinh": "gpu",
-  "card-do-hoa": "gpu",
-  gpu: "gpu",
-  "cpu-bo-xu-ly": "cpu",
-  "vi-xu-ly": "cpu",
-  cpu: "cpu",
-  "man-hinh": "monitor",
-  monitor: "monitor",
-  ram: "ram",
-  "bo-nho-ram": "ram",
-  "bo-nho-trong": "ram",
-  "o-cung": "storage",
-  "o-cung-ssd": "storage",
-  "o-cung-hdd": "storage",
-  "o-luu-tru": "storage",
-  storage: "storage",
-};
-
-function mapCategorySlugToFrontend(slug: string | null | undefined): ProductCategory | null {
-  if (!slug) return null;
-  return CATEGORY_SLUG_TO_FRONTEND[slug] ?? null;
-}
-
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 const PLACEHOLDER_THUMBNAIL =
@@ -134,12 +108,16 @@ function pickThumbnail(...candidates: (string | null | undefined)[]): string {
 
 // ─── Mappers ───────────────────────────────────────────────────────────────
 
-function mapBackendProductToCatalogue(
+async function mapBackendProductToCatalogue(
   p: BackendListProduct,
-): CatalogueProduct | null {
-  const category = mapCategorySlugToFrontend(p.categorySlug);
-  if (!category) return null;
+): Promise<CatalogueProduct | null> {
   if (!p.variants.length) return null;
+
+  const categoryId = String(p.categoryId ?? "");
+  const { rootCategoryId, rootCategoryName } = await resolveCategoryRoot(
+    categoryId,
+    p.category,
+  );
 
   const defaultVariant =
     p.variants.find((v) => v.isDefault) ?? p.variants[0];
@@ -149,6 +127,7 @@ function mapBackendProductToCatalogue(
     label: v.name,
     currentPrice: Number(v.price),
     originalPrice: Number(v.originalPrice),
+    isDefault: Boolean(v.isDefault),
   }));
 
   return {
@@ -156,7 +135,11 @@ function mapBackendProductToCatalogue(
     name: p.name,
     brands: (p.brands ?? []).filter((b) => b && b.trim().length > 0),
     slug: p.slug,
-    category,
+    categoryId,
+    categoryName: p.category ?? "",
+    rootCategoryId,
+    rootCategoryName,
+    category: rootCategoryId,
     currentPrice: Number(defaultVariant.price),
     originalPrice: Number(defaultVariant.originalPrice),
     thumbnailSrc: pickThumbnail(
@@ -185,17 +168,21 @@ function mapBackendSpecsToCompareGroups(
   }));
 }
 
-function mapBackendDetailToCompareProduct(
+async function mapBackendDetailToCompareProduct(
   detail: BackendProductDetail,
   variantId: string,
   specGroups: CompareSpecGroup[],
-): CompareProduct | null {
-  const category = mapCategorySlugToFrontend(detail.category?.slug);
-  if (!category) return null;
-
+): Promise<CompareProduct | null> {
   const variant: BackendProductVariant | undefined =
     detail.variants.find((v) => String(v.id) === String(variantId));
   if (!variant) return null;
+
+  const categoryId = String(detail.category?.id ?? "");
+  const leafName = detail.category?.name ?? "";
+  const { rootCategoryId, rootCategoryName } = await resolveCategoryRoot(
+    categoryId,
+    leafName,
+  );
 
   const isMultiVariant = detail.variants.length > 1;
   const currentPrice = Number(variant.salePrice);
@@ -217,7 +204,11 @@ function mapBackendDetailToCompareProduct(
     name: isMultiVariant ? `${detail.name} · ${variant.name}` : detail.name,
     brands: brandNames,
     slug: detail.slug,
-    category,
+    categoryId,
+    categoryName: leafName,
+    rootCategoryId,
+    rootCategoryName,
+    category: rootCategoryId,
     currentPrice,
     originalPrice,
     discountPct: computeDiscountPct(currentPrice, originalPrice),
@@ -232,6 +223,13 @@ function mapBackendDetailToCompareProduct(
 
 export interface GetCompareCatalogueOptions {
   limit?: number;
+}
+
+async function mapManyCatalogue(items: BackendListProduct[]): Promise<CatalogueProduct[]> {
+  // Pre-warm the cache once so all subsequent resolveCategoryRoot calls hit memory.
+  await getCategoryTreeIndex();
+  const results = await Promise.all(items.map(mapBackendProductToCatalogue));
+  return results.filter((p): p is CatalogueProduct => p !== null);
 }
 
 export async function getCompareCatalogue(
@@ -250,9 +248,7 @@ export async function getCompareCatalogue(
       `/products?${qs.toString()}`,
       { cache: "no-store" },
     );
-    return response.data
-      .map(mapBackendProductToCatalogue)
-      .filter((p): p is CatalogueProduct => p !== null);
+    return mapManyCatalogue(response.data);
   } catch {
     return [];
   }
@@ -273,9 +269,7 @@ export async function getSuggestedProducts(
       `/products?${qs.toString()}`,
       { cache: "no-store" },
     );
-    return response.data
-      .map(mapBackendProductToCatalogue)
-      .filter((p): p is CatalogueProduct => p !== null);
+    return mapManyCatalogue(response.data);
   } catch {
     return [];
   }
@@ -288,6 +282,140 @@ export async function getInitialCompareVariants(
   // MVP: variant-id-only fetch needs product slug too; not used on first paint.
   // Page passes [] for now. Reserved for ?ids=… support later.
   return [];
+}
+
+/**
+ * Drawer paginated search — hits the backend products endpoint scoped to the
+ * locked category (when present), with optional search/brand/price/spec filters.
+ */
+export async function searchCompareProducts(
+  params: CompareSearchParams,
+): Promise<CompareSearchResult> {
+  const qs = new URLSearchParams();
+  qs.set("page", String(params.page));
+  qs.set("limit", String(params.limit));
+  qs.set("status", "published");
+  qs.set("sortBy", "createdAt");
+  qs.set("sortOrder", "DESC");
+  if (params.categoryId) {
+    qs.set("categoryId", params.categoryId);
+  } else if (params.categoryName) {
+    // Fallback: backend supports `category=<vi-name>` via LIKE match.
+    qs.set("category", params.categoryName);
+  }
+  if (params.q && params.q.trim()) qs.set("q", params.q.trim());
+  if (params.brandIds && params.brandIds.length > 0) {
+    for (const id of params.brandIds) qs.append("brandIds", id);
+  } else if (params.brandId) {
+    qs.set("brandId", params.brandId);
+  }
+  if (params.minPrice != null) qs.set("minPrice", String(params.minPrice));
+  if (params.maxPrice != null) qs.set("maxPrice", String(params.maxPrice));
+
+  if (params.specs) {
+    for (const [typeIdStr, spec] of Object.entries(params.specs)) {
+      const typeId = Number(typeIdStr);
+      if (!Number.isFinite(typeId) || typeId <= 0) continue;
+      if (spec.toggle) {
+        qs.append("specs", `${typeId}:true`);
+        continue;
+      }
+      if (spec.values && spec.values.length > 0) {
+        qs.append("specs", `${typeId}:${spec.values.join(",")}`);
+        continue;
+      }
+      if (spec.min != null || spec.max != null) {
+        // Backend regex requires both sides; pad with safe sentinels.
+        const min = spec.min != null ? spec.min : 0;
+        const max = spec.max != null ? spec.max : Number.MAX_SAFE_INTEGER;
+        qs.append("specs", `${typeId}:${min}..${max}`);
+      }
+    }
+  }
+
+  try {
+    const response = await storefrontApiFetch<BackendListResponse>(
+      `/products?${qs.toString()}`,
+      { cache: "no-store" },
+    );
+    const items = await mapManyCatalogue(response.data);
+    return {
+      items,
+      total: response.total,
+      page: response.page,
+      totalPages: response.totalPages,
+    };
+  } catch {
+    return { items: [], total: 0, page: params.page, totalPages: 0 };
+  }
+}
+
+/**
+ * Facet schema for the drawer's dynamic spec filters.
+ * Backend returns groups → types with widget metadata + option counts.
+ */
+export async function getCategoryFacets(
+  categoryId: string,
+): Promise<CompareFacetGroup[]> {
+  if (!categoryId) return [];
+  try {
+    const raw = await storefrontApiFetch<CompareFacetGroup[]>(
+      `/specs/categories/${encodeURIComponent(categoryId)}/facets`,
+      { cache: "no-store" },
+    );
+    // Spec values are stored as richtext in the backend; strip HTML so labels
+    // render as plain text in the drawer filter (groups, facets, options).
+    return raw.map((g) => ({
+      ...g,
+      label: stripHtml(g.label),
+      types: g.types.map((t) => ({
+        ...t,
+        label: stripHtml(t.label),
+        options: t.options?.map((o) => ({
+          ...o,
+          label: stripHtml(o.label),
+        })),
+      })),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ─── Brand catalogue (drawer filter) ─────────────────────────────────────────
+
+interface BackendBrandListResponse {
+  data: Array<{
+    id: number | string;
+    name?: string;
+    tenThuongHieu?: string;
+    slug?: string | null;
+    logo?: string | null;
+    isVisible?: boolean;
+  }>;
+  total?: number;
+}
+
+/**
+ * Fetches the visible-brand list for the drawer's multi-select filter.
+ * Single request with a high limit so we can render all brands at once
+ * (the storefront brand count is small — well under 200 in practice).
+ */
+export async function getAllBrandsForCompare(): Promise<CompareBrand[]> {
+  try {
+    const response = await storefrontApiFetch<BackendBrandListResponse>(
+      "/brands?page=1&limit=200&active=true",
+      { cache: "no-store" },
+    );
+    return (response.data ?? []).map((b) => ({
+      id: String(b.id),
+      name: String(b.name ?? b.tenThuongHieu ?? ""),
+      slug: b.slug ?? null,
+      logo: b.logo ?? null,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 export async function getCompareVariantById(args: {
@@ -310,7 +438,7 @@ export async function getCompareVariantById(args: {
     ]);
 
     const compareGroups = mapBackendSpecsToCompareGroups(specs, variantId);
-    return mapBackendDetailToCompareProduct(detail, variantId, compareGroups);
+    return await mapBackendDetailToCompareProduct(detail, variantId, compareGroups);
   } catch {
     return null;
   }

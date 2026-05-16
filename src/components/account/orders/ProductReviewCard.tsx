@@ -14,8 +14,8 @@ import { Textarea } from "@/src/components/ui/Textarea";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { ReturnFileUpload } from "@/src/components/account/returns/ReturnFileUpload";
-import type { FilePreview } from "@/src/app/(storefront)/account/returns/_mock_data";
-import type { OrderDetailItem } from "@/src/app/(storefront)/account/orders/[orderId]/_mock_data";
+import type { FilePreview } from "@/src/types/account-return.types";
+import type { OrderDetailItem } from "@/src/types/account-order.types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -123,6 +123,7 @@ export const ProductReviewCard = forwardRef<
   // ── Submitted state ────────────────────────────────────────────────────────
 
   if (item.review) {
+    const reviewImages = item.review.images ?? [];
     return (
       <div className="flex flex-col gap-4">
         {header}
@@ -136,11 +137,35 @@ export const ProductReviewCard = forwardRef<
             <p className="text-sm font-semibold text-secondary-900">
               Cảm ơn đánh giá của bạn!
             </p>
-            <Badge variant="warning" dot>
-              Đang chờ duyệt
+            <Badge
+              variant={item.review.status === "approved" ? "success" : "warning"}
+              dot
+            >
+              {item.review.status === "approved" ? "Đã duyệt" : "Đang chờ duyệt"}
             </Badge>
           </div>
           <RatingStars mode="display" value={item.review.rating} size="md" />
+          {reviewImages.length > 0 && (
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {reviewImages.map((url, idx) => (
+                <a
+                  key={url}
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="relative block h-16 w-16 overflow-hidden rounded-lg border border-secondary-200"
+                >
+                  <Image
+                    src={url}
+                    alt={`Ảnh đánh giá ${idx + 1}`}
+                    fill
+                    sizes="64px"
+                    className="object-cover"
+                  />
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );

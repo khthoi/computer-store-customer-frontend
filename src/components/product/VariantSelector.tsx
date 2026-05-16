@@ -22,6 +22,14 @@ export interface VariantOption {
   color?: string;
   /** Optional price delta label (e.g. "+500.000 ₫") */
   priceDelta?: ReactNode;
+  /** Sale price of this specific variant (used by drawer preview to swap price on selection) */
+  price?: number;
+  /** Original (pre-discount) price of this variant; rendered with strikethrough when greater than price */
+  originalPrice?: number;
+  /** Main media URL for this variant; drawer preview swaps thumbnail when this variant is selected */
+  thumbnailUrl?: string | null;
+  /** Marks this option as the product's default variant; drawer pre-selects it on open */
+  isDefault?: boolean;
 }
 
 export interface VariantSelectorProps {

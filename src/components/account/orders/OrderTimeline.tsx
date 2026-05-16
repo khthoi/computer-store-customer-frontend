@@ -2,11 +2,11 @@
 
 import { motion } from "framer-motion";
 import { CheckIcon } from "@heroicons/react/24/solid";
-import {
-  getStatusMeta,
-  type OrderStatus,
-  type TimelineEvent,
-} from "@/src/app/(storefront)/account/orders/[orderId]/_mock_data";
+import { getStatusMeta } from "@/src/lib/orders/status-meta";
+import type {
+  OrderStatus,
+  TimelineEvent,
+} from "@/src/types/account-order.types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -241,7 +241,7 @@ export function OrderTimeline({
 
         return (
           <TimelineStep
-            key={event.status}
+            key={`${event.status}-${index}`}
             event={event}
             isLast={isLast}
             orderStatus={orderStatus}

@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { ProductCarousel } from "@/src/components/product/ProductCarousel";
-import {
-  type StorefrontProductCardDto,
-  toProductCardProps,
-} from "@/src/types/storefront-product-card.types";
+import type { StorefrontProductCardDto } from "@/src/types/storefront-product-card.types";
 
 interface HomepageProductCarouselProps {
   title: string;
@@ -19,7 +16,6 @@ export function HomepageProductCarousel({
   products,
 }: HomepageProductCarouselProps) {
   if (!products.length) return null;
-  const mapped = products.map(toProductCardProps);
 
   return (
     <section
@@ -43,7 +39,7 @@ export function HomepageProductCarousel({
             </Link>
           )}
         </div>
-        <ProductCarousel products={mapped} />
+        <ProductCarousel products={[]} dtos={products} />
       </div>
     </section>
   );

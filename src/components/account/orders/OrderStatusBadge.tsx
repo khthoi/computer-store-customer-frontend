@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { getStatusMeta, type OrderStatus } from "@/src/app/(storefront)/account/orders/[orderId]/_mock_data";
+import { getStatusMeta } from "@/src/lib/orders/status-meta";
+import type { OrderStatus } from "@/src/types/account-order.types";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 

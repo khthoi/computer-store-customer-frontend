@@ -10,12 +10,12 @@ import { Tooltip } from "@/src/components/ui/Tooltip";
 import { ReturnStatusBadge } from "@/src/components/account/returns/ReturnStatusBadge";
 import {
   RETURN_REASON_OPTIONS,
-} from "@/src/app/(storefront)/account/returns/_mock_data";
+} from "@/src/types/account-return.types";
 import type {
   ReturnRequest,
   ReturnStatus,
-} from "@/src/app/(storefront)/account/returns/_mock_data";
-import type { OrderSummary } from "@/src/app/(storefront)/account/orders/_mock_data";
+} from "@/src/types/account-return.types";
+import type { OrderSummary } from "@/src/types/account-order.types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -287,7 +287,7 @@ export function ReturnRequestDetailCard({
           Đơn hàng:{" "}
           <Tooltip content="Xem chi tiết đơn hàng" placement="top">
             <a
-              href={`/account/orders/${order.id}`}
+              href={`/account/orders/${order.numericId}`}
               className="font-semibold text-secondary-900 hover:text-primary-600 hover:underline underline-offset-2 transition-colors duration-150"
             >
               {order.id}

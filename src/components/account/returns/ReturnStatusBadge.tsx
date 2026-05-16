@@ -1,4 +1,4 @@
-import type { ReturnStatus } from "@/src/app/(storefront)/account/returns/_mock_data";
+import type { ReturnStatus } from "@/src/types/account-return.types";
 
 // ─── Style map ────────────────────────────────────────────────────────────────
 

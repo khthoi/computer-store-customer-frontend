@@ -16,21 +16,24 @@ import type { ReactNode } from "react";
 import { AuthProvider } from "@/src/store/auth.store";
 import { CartProvider } from "@/src/store/cart.store";
 import { WishlistProvider } from "@/src/store/wishlist.store";
+import { CompareProvider } from "@/src/store/compare.store";
 import { AuthModalRoot } from "@/src/components/auth/AuthModal";
 import { ToastProvider } from "@/src/components/ui/Toast";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
-      <WishlistProvider>
-        <CartProvider>
-          <ToastProvider>
-            {children}
-            {/* Global auth modal — reads from AuthContext, no circular dep */}
-            <AuthModalRoot />
-          </ToastProvider>
-        </CartProvider>
-      </WishlistProvider>
+      <ToastProvider>
+        <WishlistProvider>
+          <CartProvider>
+            <CompareProvider>
+              {children}
+              {/* Global auth modal — reads from AuthContext, no circular dep */}
+              <AuthModalRoot />
+            </CompareProvider>
+          </CartProvider>
+        </WishlistProvider>
+      </ToastProvider>
     </AuthProvider>
   );
 }

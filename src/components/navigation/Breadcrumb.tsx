@@ -2,6 +2,7 @@
 
 import { Fragment, type ReactNode } from "react";
 import { ChevronRightIcon, HomeIcon, EllipsisHorizontalIcon } from "@heroicons/react/24/outline";
+import { Tooltip } from "@/src/components/ui/Tooltip";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -116,32 +117,32 @@ export function Breadcrumb({
               )}
 
               <li className="flex items-center">
-                {isLast || !item.href ? (
-                  /* Current page — not a link */
-                  <span
-                    aria-current={isLast ? "page" : undefined}
-                    className={[
-                      "flex items-center gap-1 rounded px-1.5 py-0.5 font-medium truncate max-w-[160px] sm:max-w-[240px]",
-                      isLast
-                        ? "text-secondary-900"
-                        : "text-secondary-500",
-                    ].join(" ")}
-                    title={item.label}
-                  >
-                    {item.icon}
-                    {item.label}
-                  </span>
-                ) : (
-                  /* Navigable link */
-                  <a
-                    href={item.href}
-                    className="flex items-center gap-1 rounded px-1.5 py-0.5 text-secondary-500 transition-colors hover:bg-secondary-100 hover:text-secondary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 truncate max-w-[160px] sm:max-w-[240px]"
-                    title={item.label}
-                  >
-                    {item.icon}
-                    {item.label}
-                  </a>
-                )}
+                <Tooltip content={item.label} placement="top">
+                  {isLast || !item.href ? (
+                    /* Current page — not a link */
+                    <span
+                      aria-current={isLast ? "page" : undefined}
+                      className={[
+                        "flex items-center gap-1 rounded px-1.5 py-0.5 font-medium truncate max-w-[160px] sm:max-w-[240px]",
+                        isLast
+                          ? "text-secondary-900"
+                          : "text-secondary-500",
+                      ].join(" ")}
+                    >
+                      {item.icon}
+                      {item.label}
+                    </span>
+                  ) : (
+                    /* Navigable link */
+                    <a
+                      href={item.href}
+                      className="flex items-center gap-1 rounded px-1.5 py-0.5 text-secondary-500 transition-colors hover:bg-secondary-100 hover:text-secondary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 truncate max-w-[160px] sm:max-w-[240px]"
+                    >
+                      {item.icon}
+                      {item.label}
+                    </a>
+                  )}
+                </Tooltip>
               </li>
             </Fragment>
           );

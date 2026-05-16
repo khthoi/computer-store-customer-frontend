@@ -8,6 +8,8 @@ import type { ProductDetail } from "@/src/components/product/types";
 
 export interface ProductHeroSectionProps {
   product: ProductDetail;
+  /** Fresh review count from the reviews endpoint — see [[ProductTabsSection]]. */
+  totalReviews?: number;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -17,8 +19,9 @@ export interface ProductHeroSectionProps {
  * product hero layout. The interactive right column is delegated to
  * ProductHeroClient (client component).
  */
-export function ProductHeroSection({ product }: ProductHeroSectionProps) {
+export function ProductHeroSection({ product, totalReviews }: ProductHeroSectionProps) {
   const firstImage = product.images[0];
+  const reviewCount = totalReviews ?? product.reviewCount;
 
   return (
     <section className="bg-white border-b border-secondary-200">
@@ -53,7 +56,7 @@ export function ProductHeroSection({ product }: ProductHeroSectionProps) {
               ratingSlot={
                 <RatingScrollButton
                   value={product.rating}
-                  count={product.reviewCount}
+                  count={reviewCount}
                 />
               }
             />

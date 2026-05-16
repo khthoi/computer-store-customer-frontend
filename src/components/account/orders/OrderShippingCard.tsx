@@ -10,7 +10,7 @@ import {
   CheckIcon,
   ArrowTopRightOnSquareIcon,
 } from "@heroicons/react/24/outline";
-import type { ShippingInfo } from "@/src/app/(storefront)/account/orders/[orderId]/_mock_data";
+import type { ShippingInfo } from "@/src/types/account-order.types";
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 

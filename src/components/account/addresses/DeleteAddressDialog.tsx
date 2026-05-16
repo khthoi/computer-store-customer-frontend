@@ -2,7 +2,7 @@
 
 import { Modal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
-import type { Address } from "@/src/app/(storefront)/account/addresses/_mock_data";
+import type { Address } from "@/src/types/account-address.types";
 
 interface DeleteAddressDialogProps {
   address: Address | null;

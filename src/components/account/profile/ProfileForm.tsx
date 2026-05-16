@@ -9,11 +9,15 @@ import { Input } from "@/src/components/ui/Input";
 import { Button } from "@/src/components/ui/Button";
 import { RadioGroup, Radio } from "@/src/components/ui/Radio";
 import { DateInput } from "@/src/components/ui/DateInput";
-import type { UserProfile, Gender } from "@/src/app/(storefront)/account/profile/_mock_data";
+import { useRouter } from "next/navigation";
+import { updateMyProfile, uploadMyAvatar } from "@/src/services/account-profile.service";
+import type { UserProfile, Gender } from "@/src/types/account-profile.types";
 
 interface ProfileFormProps {
   profile: UserProfile;
+  pendingAvatarFile?: File | null;
   onSaved?: () => void;
+  onSavingChange?: (saving: boolean) => void;
 }
 
 interface FormErrors {
@@ -38,7 +42,8 @@ function validate(data: {
  * ProfileForm — controlled form for editing the user's personal information.
  * Optimistic save: shows a 800 ms loading state then updates local state.
  */
-export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
+export function ProfileForm({ profile, pendingAvatarFile, onSaved, onSavingChange }: ProfileFormProps) {
+  const router = useRouter();
   const [fullName, setFullName] = useState(profile.fullName);
   const [phone, setPhone] = useState(profile.phone);
   const [gender, setGender] = useState<Gender>(profile.gender);
@@ -47,6 +52,7 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
   const [touched, setTouched] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,15 +62,25 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
     if (Object.keys(errs).length > 0) return;
 
     setIsSaving(true);
+    onSavingChange?.(true);
     setSaveSuccess(false);
+    setSaveError(null);
     try {
-      // Simulate API call
-      await new Promise<void>((resolve) => setTimeout(resolve, 800));
+      if (pendingAvatarFile) {
+        await uploadMyAvatar(pendingAvatarFile);
+      }
+      await updateMyProfile({ fullName, phone, gender, dateOfBirth });
       setSaveSuccess(true);
       onSaved?.();
+      router.refresh();
       setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Cập nhật thất bại. Vui lòng thử lại.";
+      setSaveError(message);
     } finally {
       setIsSaving(false);
+      onSavingChange?.(false);
     }
   };
 
@@ -163,6 +179,7 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
           variant="primary"
           size="md"
           isLoading={isSaving}
+          disabled={isSaving}
         >
           Lưu thay đổi
         </Button>
@@ -171,6 +188,9 @@ export function ProfileForm({ profile, onSaved }: ProfileFormProps) {
           <span className="text-sm font-medium text-success-600">
             Cập nhật thành công!
           </span>
+        )}
+        {saveError && (
+          <span className="text-sm font-medium text-error-600">{saveError}</span>
         )}
       </div>
     </form>

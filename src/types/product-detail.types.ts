@@ -97,6 +97,7 @@ export interface BackendReview {
   rating: number;
   tieuDe: string | null;
   noiDung: string | null;
+  hinhAnh?: string[];
   trangThai: string;
   daPhanHoi: boolean;
   helpfulCount: number;
@@ -141,6 +142,7 @@ export interface BackendProductListItem {
     sku: string;
     name: string;
     price: number;
+    originalPrice: number;
     stock: number;
     status: "active" | "inactive";
     thumbnailUrl: string | null;

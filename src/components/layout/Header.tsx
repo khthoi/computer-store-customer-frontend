@@ -258,7 +258,7 @@ function ActionIcons({
       </Link>
 
       <Link
-        href="/wishlist"
+        href="/account/wishlist"
         className="hidden flex-col items-center gap-0.5 text-secondary-500 transition-colors hover:text-primary-600 md:flex"
       >
         <div className="relative">
@@ -430,7 +430,7 @@ export function Header({
   const [scrolled, setScrolled] = useState(false);
   const [compactMegaOpen, setCompactMegaOpen] = useState(false);
   const rafRef = useRef<number>(0);
-  const compactCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const compactMegaContainerRef = useRef<HTMLDivElement | null>(null);
 
   const sidebarCategories = useMemo<SidebarMenuCategory[]>(
     () => toSidebarCategories(categories),
@@ -465,14 +465,37 @@ export function Header({
     };
   }, []);
 
-  function openCompactMega() {
-    if (compactCloseTimer.current) clearTimeout(compactCloseTimer.current);
-    setCompactMegaOpen(true);
-  }
+  // Compact mega menu: click-toggle, with outside-click + Escape to close.
+  useEffect(() => {
+    if (!compactMegaOpen) return;
+    function handleMouseDown(event: MouseEvent) {
+      const target = event.target as Node | null;
+      if (!target) return;
+      const container = compactMegaContainerRef.current;
+      if (container && container.contains(target)) return;
+      if (
+        target instanceof Element &&
+        target.closest('[data-mega-panel="header-compact"]')
+      ) {
+        return;
+      }
+      setCompactMegaOpen(false);
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setCompactMegaOpen(false);
+    }
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [compactMegaOpen]);
 
-  function closeCompactMegaDelayed() {
-    compactCloseTimer.current = setTimeout(() => setCompactMegaOpen(false), 180);
-  }
+  // Close compact mega when the header restores (scrolled back to top).
+  useEffect(() => {
+    if (!scrolled) setCompactMegaOpen(false);
+  }, [scrolled]);
 
   return (
     <header className="sticky top-0 z-50 w-full">
@@ -494,11 +517,7 @@ export function Header({
         >
           <div className="flex shrink-0 items-center gap-3">
             {scrolled && (
-              <div
-                className="hidden shrink-0 lg:block"
-                onMouseEnter={openCompactMega}
-                onMouseLeave={closeCompactMegaDelayed}
-              >
+              <div ref={compactMegaContainerRef} className="hidden shrink-0 lg:block">
                 <button
                   type="button"
                   aria-haspopup="true"
@@ -583,9 +602,8 @@ export function Header({
             <div
               role="region"
               aria-label="Tất cả danh mục sản phẩm"
+              data-mega-panel="header-compact"
               className="absolute left-0 right-0 top-full z-[200] pt-2"
-              onMouseEnter={openCompactMega}
-              onMouseLeave={closeCompactMegaDelayed}
             >
               <SidebarMegaMenu
                 categories={sidebarCategories}

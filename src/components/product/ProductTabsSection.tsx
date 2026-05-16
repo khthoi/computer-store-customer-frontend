@@ -10,6 +10,12 @@ import type { ProductDetail } from "@/src/components/product/types";
 
 export interface ProductTabsSectionProps {
   product: ProductDetail;
+  /**
+   * Fresh review count from `/products/:id/reviews?page=1`. Use this instead of
+   * `product.reviewCount` (which reads from a cached column that can lag the
+   * actual approved-review count when reviews exist on non-default variants).
+   */
+  totalReviews?: number;
 }
 
 type TabValue = "description" | "specs" | "reviews";
@@ -22,9 +28,10 @@ type TabValue = "description" | "specs" | "reviews";
  * can be rendered in separate DOM positions. Listens for the custom
  * 'switchTab' CustomEvent dispatched by ProductHeroClient.
  */
-export function ProductTabsSection({ product }: ProductTabsSectionProps) {
+export function ProductTabsSection({ product, totalReviews }: ProductTabsSectionProps) {
   const baseId = useId();
   const [activeTab, setActiveTab] = useState<TabValue>("description");
+  const reviewCount = totalReviews ?? product.reviewCount;
 
   // Listen for cross-component tab-switching (dispatched from rating star click)
   useEffect(() => {
@@ -49,7 +56,7 @@ export function ProductTabsSection({ product }: ProductTabsSectionProps) {
   const tabs: Array<{ value: TabValue; label: string }> = [
     { value: "description", label: "Mô tả sản phẩm" },
     { value: "specs", label: "Thông số kỹ thuật" },
-    { value: "reviews", label: `Đánh giá (${product.reviewCount})` },
+    { value: "reviews", label: `Đánh giá (${reviewCount})` },
   ];
 
   return (
@@ -138,7 +145,7 @@ export function ProductTabsSection({ product }: ProductTabsSectionProps) {
               initialReviews={product.reviews}
               ratingDistribution={product.ratingDistribution}
               averageRating={product.rating}
-              totalReviews={product.reviewCount}
+              totalReviews={reviewCount}
               canReview={false}
             />
           )}

@@ -10,6 +10,7 @@ import {
   HeartIcon,
   ArrowUturnLeftIcon,
   ChatBubbleLeftRightIcon,
+  WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline";
 import {
   UserIcon as UserIconSolid,
@@ -19,6 +20,7 @@ import {
   HeartIcon as HeartIconSolid,
   ArrowUturnLeftIcon as ArrowUturnLeftIconSolid,
   ChatBubbleLeftRightIcon as ChatBubbleLeftRightIconSolid,
+  WrenchScrewdriverIcon as WrenchScrewdriverIconSolid,
 } from "@heroicons/react/24/solid";
 import { Avatar } from "@/src/components/ui/Avatar";
 import { Tabs } from "@/src/components/ui/Tabs";
@@ -78,6 +80,13 @@ const NAV_ITEMS: NavItem[] = [
     iconActive: <HeartIconSolid className="h-5 w-5" />,
   },
   {
+    href: "/account/build-pc",
+    label: "Cấu hình PC",
+    tabValue: "build-pc",
+    icon: <WrenchScrewdriverIcon className="h-5 w-5" />,
+    iconActive: <WrenchScrewdriverIconSolid className="h-5 w-5" />,
+  },
+  {
     href: "/account/support",
     label: "Hỗ trợ",
     tabValue: "support",
@@ -94,7 +103,13 @@ const NAV_ITEMS: NavItem[] = [
  * - Desktop (lg+): 240px fixed sidebar with nav links + user avatar.
  * - Mobile (<lg): pill Tabs rendered across the top of the content area.
  */
-export function AccountSidebar() {
+export interface AccountSidebarProps {
+  userName: string;
+  tierLabel: string;
+  avatarSrc?: string;
+}
+
+export function AccountSidebar({ userName, tierLabel, avatarSrc }: AccountSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -116,13 +131,13 @@ export function AccountSidebar() {
       <aside className="hidden lg:flex lg:w-60 lg:flex-col lg:gap-2 lg:shrink-0">
         {/* User card */}
         <div className="mb-2 flex items-center gap-3 rounded-2xl border border-secondary-200 bg-white px-4 py-4">
-          <Avatar name="Nguyễn Văn An" size="xl" />
+          <Avatar name={userName} src={avatarSrc} size="xl" />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-secondary-900">
-              Nguyễn Văn An
+              {userName}
             </p>
             <p className="truncate text-xs text-secondary-400">
-              Thành viên Bạc
+              {tierLabel}
             </p>
           </div>
         </div>

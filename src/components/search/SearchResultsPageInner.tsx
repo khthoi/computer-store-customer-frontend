@@ -416,7 +416,7 @@ export function SearchResultsPageInner({
                 />
               ) : (
                 <>
-                  <ProductCardList products={productCards} itemsPerRow={6} />
+                  <ProductCardList products={[]} dtos={results.products} itemsPerRow={6} />
 
                   {results.totalPages > 1 && (
                     <div className="mt-8 flex justify-center">

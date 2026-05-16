@@ -1,25 +1,50 @@
+"use client";
+
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { PointsBadge } from "@/src/components/account/points/PointsBadge";
 import { PointsHistoryTable } from "@/src/components/account/points/PointsHistoryTable";
 import { PointsEarnAccordion } from "@/src/components/account/points/PointsEarnAccordion";
-import type { PointsData } from "@/src/app/(storefront)/account/points/_mock_data";
+import { RedemptionCatalog } from "@/src/components/account/points/RedemptionCatalog";
+import { Pagination } from "@/src/components/navigation/Pagination";
+import type {
+  EarnRule,
+  PointsData,
+  RedemptionCatalogItem,
+  RedemptionRecord,
+} from "@/src/types/account-loyalty.types";
 
 export interface PointsPageInnerProps {
   data: PointsData;
+  earnRules: EarnRule[];
+  catalog: RedemptionCatalogItem[];
+  redemptions: RedemptionRecord[];
+  historyPage?: number;
+  historyTotalPages?: number;
 }
 
-/**
- * PointsPageInner — server component for /account/points.
- *
- * Layout:
- *   Row 1: PointsBadge (hero) | PointsEarnAccordion (rules)
- *   Row 2: PointsHistoryTable (full width)
- */
-export function PointsPageInner({ data }: PointsPageInnerProps) {
+export function PointsPageInner({
+  data,
+  earnRules,
+  catalog,
+  redemptions,
+  historyPage = 1,
+  historyTotalPages = 1,
+}: PointsPageInnerProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  function goToPage(next: number) {
+    const params = new URLSearchParams(searchParams?.toString() ?? "");
+    if (next <= 1) params.delete("page");
+    else params.set("page", String(next));
+    const qs = params.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname);
+  }
+
   return (
     <div className="space-y-6">
-      {/* ── Row 1 ───────────────────────────────────────────────────────── */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        {/* Hero balance card */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-start">
         <PointsBadge
           tier={data.tier}
           balance={data.balance}
@@ -27,19 +52,32 @@ export function PointsPageInner({ data }: PointsPageInnerProps) {
           pointsToNextTier={data.pointsToNextTier}
           nextTier={data.nextTier}
         />
-
-        {/* How-to-earn accordion */}
         <div className="rounded-2xl border border-secondary-200 bg-white p-5">
-          <PointsEarnAccordion />
+          <PointsEarnAccordion rules={earnRules} />
         </div>
       </div>
 
-      {/* ── Row 2 — History ─────────────────────────────────────────────── */}
+      <RedemptionCatalog
+        balance={data.balance}
+        catalog={catalog}
+        recentRedemptions={redemptions}
+      />
+
       <div className="rounded-2xl border border-secondary-200 bg-white p-5">
         <h2 className="mb-4 text-base font-semibold text-secondary-900">
           Lịch sử điểm thưởng
         </h2>
         <PointsHistoryTable transactions={data.history} />
+        {historyTotalPages > 1 && (
+          <div className="mt-4 flex justify-end">
+            <Pagination
+              size="sm"
+              page={historyPage}
+              totalPages={historyTotalPages}
+              onPageChange={goToPage}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

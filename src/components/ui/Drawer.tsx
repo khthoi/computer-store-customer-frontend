@@ -15,7 +15,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type DrawerPosition = "left" | "right" | "bottom";
-export type DrawerSize = "sm" | "md" | "lg" | "xl";
+export type DrawerSize = "sm" | "md" | "lg" | "xl" | "2xl";
 
 export interface DrawerProps {
   /** Controls visibility */
@@ -68,6 +68,7 @@ const SIDE_SIZE: Record<DrawerSize, string> = {
   md: "w-80",
   lg: "w-96",
   xl: "w-[30rem]",
+  "2xl": "w-[42rem] max-w-[90vw]",
 };
 
 const BOTTOM_SIZE: Record<DrawerSize, string> = {
@@ -75,6 +76,7 @@ const BOTTOM_SIZE: Record<DrawerSize, string> = {
   md: "max-h-[50vh]",
   lg: "max-h-[70vh]",
   xl: "max-h-[90vh]",
+  "2xl": "max-h-[95vh]",
 };
 
 const PANEL_POSITION: Record<DrawerPosition, string> = {

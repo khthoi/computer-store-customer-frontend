@@ -24,6 +24,8 @@ export interface SelectOption {
   value: string;
   /** Display text in the list and trigger */
   label: string;
+  /** Optional secondary line shown under the label in the dropdown only */
+  description?: string;
   /** Prevents the option from being selected */
   disabled?: boolean;
 }
@@ -167,7 +169,21 @@ function OptionItem({
           )}
         </span>
       )}
-      <span className="flex-1 truncate">{option.label}</span>
+      <span className="flex-1 min-w-0">
+        <span
+          className={[
+            "block truncate",
+            option.description ? "font-semibold" : "",
+          ].join(" ")}
+        >
+          {option.label}
+        </span>
+        {option.description && (
+          <span className="block truncate text-xs font-normal text-secondary-400">
+            {option.description}
+          </span>
+        )}
+      </span>
       {/* Single select: trailing checkmark */}
       {!multiple && isSelected && (
         <CheckIcon className="size-4 shrink-0 text-primary-600" aria-hidden="true" />

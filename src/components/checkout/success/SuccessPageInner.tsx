@@ -7,12 +7,12 @@ import { Alert } from "@/src/components/ui/Alert";
 import { ProductCarousel } from "@/src/components/product/ProductCarousel";
 import { SuccessHero } from "./SuccessHero";
 import { OrderDetailsCard } from "./OrderDetailsCard";
-import type { MockOrder, RecommendedProduct } from "@/src/app/(storefront)/checkout/success/_mock_data";
+import type { RecommendedProduct, SuccessOrder } from "@/src/types/checkout-success.types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface SuccessPageInnerProps {
-  order: MockOrder;
+  order: SuccessOrder;
   recommendedProducts: RecommendedProduct[];
 }
 
@@ -61,7 +61,7 @@ export function SuccessPageInner({
       {/* ── Action buttons ──────────────────────────────────────────────── */}
       {/* Tab order: copy (in SuccessHero) → track order → continue shopping */}
       <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-        <Link href={`/account/orders/${order.id}`}>
+        <Link href={`/account/orders/${order.numericId}`}>
           <Button variant="primary" size="md">
             Theo dõi đơn hàng
           </Button>

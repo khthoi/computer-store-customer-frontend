@@ -16,6 +16,7 @@ import {
   XMarkIcon,
   MagnifyingGlassPlusIcon,
   PlayIcon,
+  PhotoIcon,
 } from "@heroicons/react/24/outline";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -237,13 +238,12 @@ export function ProductImageGallery({
   defaultIndex = 0,
   className = "",
 }: ProductImageGalleryProps) {
+  // All hooks must be called unconditionally before any early return.
   const [activeIndex, setActiveIndex] = useState(
-    clamp(defaultIndex, 0, items.length - 1)
+    items.length > 0 ? clamp(defaultIndex, 0, items.length - 1) : 0
   );
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
-
-  const activeItem = items[activeIndex];
 
   const handleThumbnailKeyDown = useCallback(
     (e: KeyboardEvent<HTMLButtonElement>, idx: number) => {
@@ -255,6 +255,19 @@ export function ProductImageGallery({
 
   // Reset loaded state when active image changes
   useEffect(() => { setImgLoaded(false); }, [activeIndex]);
+
+  // Guard: render placeholder when no media items are provided (after all hooks)
+  if (items.length === 0) {
+    return (
+      <div className={["flex flex-col gap-3", className].filter(Boolean).join(" ")}>
+        <div className="aspect-square overflow-hidden rounded-xl border border-secondary-200 bg-secondary-100 flex items-center justify-center">
+          <PhotoIcon className="h-20 w-20 text-secondary-300" aria-hidden="true" />
+        </div>
+      </div>
+    );
+  }
+
+  const activeItem = items[activeIndex];
 
   return (
     <div className={["flex flex-col gap-3", className].filter(Boolean).join(" ")}>

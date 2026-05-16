@@ -6,7 +6,7 @@ import {
   XMarkIcon,
   PlayIcon,
 } from "@heroicons/react/24/outline";
-import type { FilePreview } from "@/src/app/(storefront)/account/returns/_mock_data";
+import type { FilePreview } from "@/src/types/account-return.types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

@@ -1,5 +1,5 @@
-import type { OrderSummary, OrderItem } from "@/src/app/(storefront)/account/orders/_mock_data";
-import type { ReturnRequest } from "@/src/app/(storefront)/account/returns/_mock_data";
+import type { OrderSummary, OrderItem } from "@/src/types/account-order.types";
+import type { ReturnRequest } from "@/src/types/account-return.types";
 
 /**
  * Returns the subset of order items that are still eligible for return.

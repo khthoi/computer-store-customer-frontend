@@ -154,9 +154,9 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
 
     return (
       <div className={disabled ? `opacity-60 ${className}` : className}>
-        <div className="flex items-start gap-3">
+        <div className={`flex gap-3 ${description ? "items-start" : "items-center"}`}>
           {/* Input + custom visual wrapper */}
-          <div className={`relative mt-0.5 shrink-0 ${BOX[size]}`}>
+          <div className={`relative shrink-0 ${description ? "mt-0.5" : ""} ${BOX[size]}`}>
             {/* Native input: transparent overlay — captures all pointer + keyboard events */}
             <input
               ref={mergeRef}

@@ -5,8 +5,8 @@ import Link from "next/link";
 import { ChevronRightIcon } from "@heroicons/react/24/outline";
 import { Tooltip } from "@/src/components/ui/Tooltip";
 import { ReturnStatusBadge } from "@/src/components/account/returns/ReturnStatusBadge";
-import type { ReturnRequest } from "@/src/app/(storefront)/account/returns/_mock_data";
-import type { OrderSummary } from "@/src/app/(storefront)/account/orders/_mock_data";
+import type { ReturnRequest } from "@/src/types/account-return.types";
+import type { OrderSummary } from "@/src/types/account-order.types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

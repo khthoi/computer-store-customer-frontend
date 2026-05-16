@@ -7,9 +7,10 @@ import {
   CalendarDaysIcon,
   CreditCardIcon,
 } from "@heroicons/react/24/outline";
+import { BoltIcon } from "@heroicons/react/24/solid";
 import { Tooltip } from "@/src/components/ui/Tooltip";
 import { formatVND } from "@/src/lib/format";
-import type { MockOrder } from "@/src/app/(storefront)/checkout/success/_mock_data";
+import type { SuccessOrder } from "@/src/types/checkout-success.types";
 
 // ─── Payment icon map ─────────────────────────────────────────────────────────
 //
@@ -66,8 +67,14 @@ function InfoRow({
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export interface OrderDetailsCardProps {
-  order: MockOrder;
+  order: SuccessOrder;
 }
+
+const PROMOTION_TYPE_LABEL: Record<string, string> = {
+  flashsale: "Flash Sale",
+  auto: "Khuyến mãi",
+  coupon: "Voucher",
+};
 
 /**
  * OrderDetailsCard — complete order summary card.
@@ -210,10 +217,20 @@ export function OrderDetailsCard({ order }: OrderDetailsCardProps) {
 
               {/* Info block */}
               <div className="flex-1 min-w-0">
-                {/* Brand pill — same style as CartItem */}
-                <span className="inline-flex items-center rounded bg-secondary-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-secondary-500">
-                  {item.brand}
-                </span>
+                {/* Brand pill + flash-sale badge */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="inline-flex items-center rounded bg-secondary-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-secondary-500">
+                    {item.brand}
+                  </span>
+                  {item.flashSale && (
+                    <Tooltip content={item.flashSale.name} placement="top" delay={300}>
+                      <span className="inline-flex items-center gap-0.5 rounded bg-error-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-error-700">
+                        <BoltIcon className="h-3 w-3" aria-hidden="true" />
+                        Flash Sale
+                      </span>
+                    </Tooltip>
+                  )}
+                </div>
 
                 {/* Product name — 2-line clamp + tooltip + new tab.
                     line-clamp-2 lives on the div (block context for clamping).
@@ -273,19 +290,23 @@ export function OrderDetailsCard({ order }: OrderDetailsCardProps) {
           />
         )}
 
-        {pricing.couponCode && pricing.couponDiscount > 0 && (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm text-secondary-500">Mã giảm giá</span>
-              <span className="inline-flex items-center rounded bg-primary-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary-700">
-                {pricing.couponCode}
+        {pricing.appliedPromotions
+          .filter((p) => p.type !== "flashsale")
+          .map((promo, idx) => (
+            <div key={`${promo.type}-${promo.id ?? idx}`} className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="inline-flex shrink-0 items-center rounded bg-primary-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary-700">
+                  {PROMOTION_TYPE_LABEL[promo.type] ?? "Khuyến mãi"}
+                </span>
+                <span className="truncate text-sm text-secondary-700">
+                  {promo.maCoupon ?? promo.name}
+                </span>
+              </div>
+              <span className="ml-2 text-sm font-medium text-success-600 shrink-0">
+                -{formatVND(promo.amount)}
               </span>
             </div>
-            <span className="text-sm font-medium text-success-600">
-              -{formatVND(pricing.couponDiscount)}
-            </span>
-          </div>
-        )}
+          ))}
 
         <SummaryRow
           label="Phí vận chuyển"

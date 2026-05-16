@@ -15,9 +15,10 @@ import { OrderCancelModal } from "@/src/components/account/orders/OrderCancelMod
 import { ReturnExpiredModal } from "@/src/components/account/orders/ReturnExpiredModal";
 import { ReviewExpiredModal } from "@/src/components/account/orders/ReviewExpiredModal";
 import { OrderReviewViewerModal } from "@/src/components/account/orders/OrderReviewViewerModal";
-import { RETURN_REQUESTS } from "@/src/app/(storefront)/account/returns/_mock_data";
 import { canOrderBeReturned } from "@/src/lib/returns/eligibility";
-import type { OrderSummary } from "@/src/app/(storefront)/account/orders/_mock_data";
+import { cancelOrder } from "@/src/services/account-order.service";
+import type { OrderSummary } from "@/src/types/account-order.types";
+import type { ReturnRequest } from "@/src/types/account-return.types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -68,6 +69,8 @@ const LINK_BTN_OUTLINE =
 export interface OrderCardProps {
   order: OrderSummary;
   onCancelSuccess: (id: string) => void;
+  /** Yêu cầu đổi/trả liên quan đến đơn này (mặc định rỗng khi chưa wire Returns). */
+  returnRequests?: ReturnRequest[];
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -80,7 +83,7 @@ export interface OrderCardProps {
  * - "Đánh giá" / "Xem đánh giá": navigates / opens viewer within 15-day window
  *   reviewing is always viewable; only submitting is time-gated
  */
-export function OrderCard({ order, onCancelSuccess }: OrderCardProps) {
+export function OrderCard({ order, onCancelSuccess, returnRequests = [] }: OrderCardProps) {
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [returnExpiredOpen, setReturnExpiredOpen] = useState(false);
@@ -103,7 +106,7 @@ export function OrderCard({ order, onCancelSuccess }: OrderCardProps) {
   const hasReview = !!order.review;
 
   // Per-item eligibility: check if there's anything left to return
-  const orderRequests = RETURN_REQUESTS.filter((r) => r.orderId === order.id);
+  const orderRequests = returnRequests.filter((r) => r.orderId === order.id);
   const hasExistingRequests = orderRequests.length > 0;
   const hasEligibleItems = canOrderBeReturned(order, orderRequests);
 
@@ -112,7 +115,7 @@ export function OrderCard({ order, onCancelSuccess }: OrderCardProps) {
   const handleCancelConfirm = async (_reason: string) => {
     setIsCancelling(true);
     try {
-      await new Promise<void>((resolve) => setTimeout(resolve, 800));
+      await cancelOrder(order.numericId);
       setCancelModalOpen(false);
       onCancelSuccess(order.id);
     } finally {
@@ -193,7 +196,7 @@ export function OrderCard({ order, onCancelSuccess }: OrderCardProps) {
         {/* ── Footer ─────────────────────────────────────────────────────── */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-secondary-100 px-4 py-3">
           <Link
-            href={`/account/orders/${order.id}`}
+            href={`/account/orders/${order.numericId}`}
             className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
           >
             Xem chi tiết
@@ -220,7 +223,7 @@ export function OrderCard({ order, onCancelSuccess }: OrderCardProps) {
                   hasEligibleItems ? (
                     // Active: within window + eligible items remain
                     <Link
-                      href={`/account/orders/${order.id}/returns/new`}
+                      href={`/account/orders/${order.numericId}/returns/new`}
                       className={LINK_BTN_GHOST}
                     >
                       <ArrowUturnLeftIcon className="h-4 w-4" />
@@ -265,7 +268,7 @@ export function OrderCard({ order, onCancelSuccess }: OrderCardProps) {
                   </Button>
                 ) : reviewWithinWindow ? (
                   <Link
-                    href={`/account/orders/${order.id}?action=review`}
+                    href={`/account/orders/${order.numericId}?action=review`}
                     className={LINK_BTN_OUTLINE}
                   >
                     <StarIcon className="h-4 w-4" />

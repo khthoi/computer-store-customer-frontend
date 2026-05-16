@@ -13,6 +13,8 @@ import {
   XMarkIcon,
   ExclamationCircleIcon,
   CpuChipIcon,
+  MinusIcon,
+  PlusIcon,
 } from "@heroicons/react/24/outline";
 import { Badge } from "@/src/components/ui/Badge";
 import { PriceTag } from "@/src/components/product/PriceTag";
@@ -57,6 +59,12 @@ export interface PCPartSelectorProps {
   /** Marks the slot as required — shows a red asterisk in the label */
   required?: boolean;
   isLoading?: boolean;
+  /** Current quantity of this part in the slot (>=1). Stepper is hidden when maxQuantity <= 1. */
+  quantity?: number;
+  /** Upper bound for the quantity stepper (from slot.soLuong). */
+  maxQuantity?: number;
+  /** Called when the user changes the quantity via the stepper. */
+  onQuantityChange?: (category: string, nextQuantity: number) => void;
   className?: string;
 }
 
@@ -89,6 +97,54 @@ function CompatibilityChip({
       {icon}
       {note ?? label}
     </span>
+  );
+}
+
+// ─── Quantity stepper ─────────────────────────────────────────────────────────
+
+interface QuantityStepperProps {
+  value: number;
+  min: number;
+  max: number;
+  label: string;
+  onChange: (next: number) => void;
+}
+
+function QuantityStepper({ value, min, max, label, onChange }: QuantityStepperProps) {
+  const canDec = value > min;
+  const canInc = value < max;
+  return (
+    <div
+      className="inline-flex items-center gap-0.5 rounded-lg border border-secondary-200 bg-white"
+      role="group"
+      aria-label={`Số lượng ${label}`}
+    >
+      <button
+        type="button"
+        onClick={() => canDec && onChange(value - 1)}
+        disabled={!canDec}
+        aria-label={`Giảm số lượng ${label}`}
+        className="flex h-7 w-7 items-center justify-center rounded-l-lg text-secondary-500 transition-colors enabled:hover:bg-secondary-100 enabled:hover:text-secondary-900 disabled:cursor-not-allowed disabled:text-secondary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+      >
+        <MinusIcon className="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
+      <span
+        className="min-w-[1.5rem] px-1 text-center text-xs font-semibold tabular-nums text-secondary-800"
+        aria-live="polite"
+      >
+        {value}
+      </span>
+      <button
+        type="button"
+        onClick={() => canInc && onChange(value + 1)}
+        disabled={!canInc}
+        aria-label={`Tăng số lượng ${label}`}
+        title={!canInc ? `Tối đa ${max} cho slot này` : undefined}
+        className="flex h-7 w-7 items-center justify-center rounded-r-lg text-secondary-500 transition-colors enabled:hover:bg-secondary-100 enabled:hover:text-secondary-900 disabled:cursor-not-allowed disabled:text-secondary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+      >
+        <PlusIcon className="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
+    </div>
   );
 }
 
@@ -141,6 +197,9 @@ export function PCPartSelector({
   onRemove,
   required = false,
   isLoading = false,
+  quantity = 1,
+  maxQuantity = 1,
+  onQuantityChange,
   className = "",
 }: PCPartSelectorProps) {
   const handleSelect = useCallback(() => onSelect?.(category), [category, onSelect]);
@@ -151,6 +210,15 @@ export function PCPartSelector({
     },
     [category, onRemove]
   );
+  const handleQty = useCallback(
+    (next: number) => onQuantityChange?.(category, next),
+    [category, onQuantityChange]
+  );
+  // Bound the upper quantity by stock when known
+  const effectiveMaxQty = selectedPart?.stockQuantity != null
+    ? Math.max(1, Math.min(maxQuantity, selectedPart.stockQuantity))
+    : Math.max(1, maxQuantity);
+  const showStepper = maxQuantity > 1 && Boolean(selectedPart) && Boolean(onQuantityChange);
 
   if (isLoading) return <SkeletonRow label={categoryLabel} />;
 
@@ -281,6 +349,15 @@ export function PCPartSelector({
 
           {/* Actions */}
           <div className="flex shrink-0 items-center gap-1.5">
+            {showStepper && (
+              <QuantityStepper
+                value={Math.min(Math.max(1, quantity), effectiveMaxQty)}
+                min={1}
+                max={effectiveMaxQty}
+                label={categoryLabel}
+                onChange={handleQty}
+              />
+            )}
             <button
               type="button"
               onClick={handleSelect}

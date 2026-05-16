@@ -15,7 +15,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type ModalSize = "sm" | "md" | "lg" | "xl" | "2xl" | "full";
+export type ModalSize = "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "full";
 
 export interface ModalProps {
   /** Controls visibility */
@@ -75,6 +75,9 @@ const SIZE: Record<ModalSize, string> = {
   lg: "max-w-lg",
   xl: "max-w-2xl",
   "2xl": "max-w-3xl",
+  "3xl": "max-w-4xl",
+  "4xl": "max-w-5xl",
+  "5xl": "max-w-6xl",
   full: "max-w-full mx-4",
 };
 

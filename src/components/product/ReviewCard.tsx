@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { HandThumbUpIcon, CheckBadgeIcon, BuildingStorefrontIcon } from "@heroicons/react/24/outline";
-import { HandThumbUpIcon as HandThumbUpSolidIcon } from "@heroicons/react/24/solid";
+import { useState } from "react";
+import { CheckBadgeIcon, BuildingStorefrontIcon } from "@heroicons/react/24/outline";
 import { Avatar } from "@/src/components/ui/Avatar";
 import { Badge, type BadgeVariant } from "@/src/components/ui/Badge";
 import { Lightbox, type LightboxItem } from "@/src/components/ui/Lightbox";
@@ -64,45 +63,6 @@ function formatDate(iso: string): string {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = d.getFullYear();
   return `${dd}/${mm}/${yyyy}`;
-}
-
-// ─── HelpfulButton (client sub-component) ─────────────────────────────────────
-
-function HelpfulButton({ initialCount }: { initialCount: number }) {
-  const [marked, setMarked] = useState(false);
-  const [count, setCount] = useState(initialCount);
-
-  const handleClick = useCallback(() => {
-    if (marked) {
-      setMarked(false);
-      setCount((c) => c - 1);
-    } else {
-      setMarked(true);
-      setCount((c) => c + 1);
-    }
-  }, [marked]);
-
-  return (
-    <button
-      type="button"
-      aria-label="Đánh dấu đánh giá là hữu ích"
-      aria-pressed={marked}
-      onClick={handleClick}
-      className={[
-        "flex items-center gap-1.5 text-sm transition-colors",
-        marked
-          ? "text-primary-600 font-medium"
-          : "text-secondary-500 hover:text-primary-600",
-      ].join(" ")}
-    >
-      {marked ? (
-        <HandThumbUpSolidIcon className="w-4 h-4" aria-hidden="true" />
-      ) : (
-        <HandThumbUpIcon className="w-4 h-4" aria-hidden="true" />
-      )}
-      <span>Hữu ích ({count})</span>
-    </button>
-  );
 }
 
 // ─── ReviewCard ────────────────────────────────────────────────────────────────
@@ -275,11 +235,6 @@ export function ReviewCard({ review }: ReviewCardProps) {
           })}
         </div>
       )}
-
-      {/* Footer */}
-      <div className="mt-4 pt-3 border-t border-secondary-100">
-        <HelpfulButton initialCount={review.helpfulCount} />
-      </div>
 
       {/* Image lightbox — full navigation across all review images */}
       {lightboxIndex !== null && (

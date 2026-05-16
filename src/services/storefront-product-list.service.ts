@@ -2,6 +2,7 @@ import { storefrontApiFetch } from "@/src/services/storefront-api.service";
 import type {
   StorefrontProductCardDto,
   StorefrontStockStatus,
+  StorefrontVariantOption,
 } from "@/src/types/storefront-product-card.types";
 
 export type ProductSort =
@@ -9,7 +10,8 @@ export type ProductSort =
   | "price-asc"
   | "price-desc"
   | "newest"
-  | "rating";
+  | "rating"
+  | "popular";
 
 export interface ProductListQuery {
   q?: string;
@@ -86,6 +88,8 @@ function mapSort(sort: ProductSort | undefined): { sortBy: string; sortOrder: "A
       return { sortBy: "totalStock", sortOrder: "DESC" };
     case "rating":
       return { sortBy: "createdAt", sortOrder: "DESC" };
+    case "popular":
+      return { sortBy: "popularity", sortOrder: "DESC" };
     default:
       return { sortBy: "createdAt", sortOrder: "DESC" };
   }
@@ -95,6 +99,19 @@ function computeStockStatus(total: number): StorefrontStockStatus {
   if (total <= 0) return "out-of-stock";
   if (total <= 5) return "low-stock";
   return "in-stock";
+}
+
+function mapVariantOption(v: BackendVariant): StorefrontVariantOption {
+  return {
+    id: String(v.id),
+    name: v.name,
+    sku: v.sku,
+    price: Number(v.price),
+    originalPrice: Number(v.originalPrice),
+    stock: v.stock,
+    isDefault: v.isDefault,
+    thumbnailUrl: v.thumbnailUrl ?? null,
+  };
 }
 
 function mapProduct(p: BackendProduct): StorefrontProductCardDto {
@@ -121,6 +138,7 @@ function mapProduct(p: BackendProduct): StorefrontProductCardDto {
     stockStatus: computeStockStatus(p.totalStock),
     stockQuantity: p.totalStock,
     badge: originalPrice ? "Sale" : undefined,
+    variants: p.variants.map(mapVariantOption),
   };
 }
 

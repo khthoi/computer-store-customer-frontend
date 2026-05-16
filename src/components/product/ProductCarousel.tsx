@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { ProductCard, type ProductCardProps } from "./ProductCard";
+import { ProductCardConnected } from "./ProductCardConnected";
+import type { StorefrontProductCardDto } from "@/src/types/storefront-product-card.types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -11,6 +13,12 @@ type SlideProduct = Omit<ProductCardProps, "onAddToCart" | "onCompare" | "onWish
 
 export interface ProductCarouselProps {
   products: SlideProduct[];
+  /**
+   * When provided, the carousel renders `ProductCardConnected` for each DTO
+   * so cart / wishlist / compare actions are wired automatically.
+   * `products` is ignored in this mode — pass either `products` OR `dtos`.
+   */
+  dtos?: StorefrontProductCardDto[];
   /** If true, show a skeleton row while data is loading */
   loading?: boolean;
   /**
@@ -52,7 +60,7 @@ const SLIDE_CLASSES: Record<4 | 5 | 6, string> = {
  * Uses Embla Carousel with loop:true for seamless infinite looping.
  * Drag (mouse) and swipe (touch) are enabled by default in Embla.
  */
-export function ProductCarousel({ products, itemsPerView = 6 }: ProductCarouselProps) {
+export function ProductCarousel({ products, dtos, itemsPerView = 6 }: ProductCarouselProps) {
   const slideClass = SLIDE_CLASSES[itemsPerView];
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
@@ -86,7 +94,8 @@ export function ProductCarousel({ products, itemsPerView = 6 }: ProductCarouselP
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
 
-  if (products.length === 0) return null;
+  const hasDtos = !!dtos && dtos.length > 0;
+  if (!hasDtos && products.length === 0) return null;
 
   return (
     <div className="relative group/carousel">
@@ -94,23 +103,17 @@ export function ProductCarousel({ products, itemsPerView = 6 }: ProductCarouselP
       <div ref={emblaRef} className="overflow-hidden">
         {/* -ml-3 offsets the first slide's pl-3 so content aligns to left edge */}
         <div className="flex touch-pan-y items-stretch -ml-3">
-          {products.map((product) => (
-            <div
-              key={product.id}
-              /*
-               * flex-basis controls how many cards are visible per breakpoint.
-               * gap-3 = 12px total gap; distributed across visible items via calc.
-               *
-               *  mobile  → 2 visible: calc(50%    - 6px)
-               *  sm      → 3 visible: calc(33.33% - 8px)
-               *  lg      → 4 visible: calc(25%    - 9px)
-               *  xl      → 5 visible: calc(20%    - 10px)
-               */
-              className={slideClass}
-            >
-              <ProductCard {...product} />
-            </div>
-          ))}
+          {dtos && dtos.length > 0
+            ? dtos.map((dto) => (
+                <div key={dto.variantId || dto.id} className={slideClass}>
+                  <ProductCardConnected dto={dto} />
+                </div>
+              ))
+            : products.map((product) => (
+                <div key={product.id} className={slideClass}>
+                  <ProductCard {...product} />
+                </div>
+              ))}
         </div>
       </div>
 

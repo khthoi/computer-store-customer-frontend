@@ -7,6 +7,7 @@ import {
   Bars3Icon,
   ChevronDownIcon,
   SparklesIcon,
+  UserGroupIcon,
 } from "@heroicons/react/24/outline";
 import { SidebarMegaMenu } from "@/src/components/navigation";
 import type { SidebarMenuCategory } from "@/src/components/navigation";
@@ -46,7 +47,7 @@ export function Navbar({ navLinks, mobileLinks, categories }: NavbarProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [shouldMarquee, setShouldMarquee] = useState(false);
   const [isMarqueePaused, setIsMarqueePaused] = useState(false);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const megaContainerRef = useRef<HTMLDivElement | null>(null);
   const quickLinksViewportRef = useRef<HTMLDivElement | null>(null);
   const quickLinksTrackRef = useRef<HTMLDivElement | null>(null);
 
@@ -108,14 +109,38 @@ export function Navbar({ navLinks, mobileLinks, categories }: NavbarProps) {
     );
   }
 
-  function openMega() {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    setMegaOpen(true);
-  }
+  // Close on outside click + Escape — click-toggle is the only way to open/close.
+  useEffect(() => {
+    if (!megaOpen) return;
+    function handleMouseDown(event: MouseEvent) {
+      const target = event.target as Node | null;
+      if (!target) return;
+      const container = megaContainerRef.current;
+      if (container && container.contains(target)) return;
+      // Mega panel renders outside the trigger container — check via data-attr.
+      if (
+        target instanceof Element &&
+        target.closest('[data-mega-panel="navbar"]')
+      ) {
+        return;
+      }
+      setMegaOpen(false);
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setMegaOpen(false);
+    }
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [megaOpen]);
 
-  function closeMegaDelayed() {
-    closeTimer.current = setTimeout(() => setMegaOpen(false), 180);
-  }
+  // Close mega menu on route change
+  useEffect(() => {
+    setMegaOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     const viewport = quickLinksViewportRef.current;
@@ -160,11 +185,7 @@ export function Navbar({ navLinks, mobileLinks, categories }: NavbarProps) {
               <span>Danh mục</span>
             </button>
 
-            <div
-              className="hidden shrink-0 lg:block"
-              onMouseEnter={openMega}
-              onMouseLeave={closeMegaDelayed}
-            >
+            <div ref={megaContainerRef} className="hidden shrink-0 lg:block">
               <button
                 type="button"
                 aria-haspopup="true"
@@ -220,15 +241,35 @@ export function Navbar({ navLinks, mobileLinks, categories }: NavbarProps) {
                 </div>
               </div>
             </div>
+
+            {/* Community Build PC — plain text link on the right of the nav slider */}
+            <Link
+              href="/community/builds"
+              aria-current={
+                pathname === "/community/builds" ||
+                pathname.startsWith("/community/builds/")
+                  ? "page"
+                  : undefined
+              }
+              className={[
+                "ml-6 hidden shrink-0 items-center gap-1.5 border-b-2 border-transparent pb-0.5 text-sm font-medium transition-colors focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary-300 lg:inline-flex",
+                pathname === "/community/builds" ||
+                pathname.startsWith("/community/builds/")
+                  ? "border-primary-600 text-primary-600"
+                  : "text-secondary-600 hover:border-primary-600 hover:text-primary-600",
+              ].join(" ")}
+            >
+              <UserGroupIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>Cộng đồng Build PC</span>
+            </Link>
           </div>
 
           {megaOpen && sidebarCategories.length > 0 && (
             <div
               role="region"
               aria-label="Tất cả danh mục sản phẩm"
+              data-mega-panel="navbar"
               className="absolute left-0 right-0 top-full z-[200] pt-2"
-              onMouseEnter={openMega}
-              onMouseLeave={closeMegaDelayed}
             >
               <SidebarMegaMenu
                 categories={sidebarCategories}
@@ -254,27 +295,33 @@ export function Navbar({ navLinks, mobileLinks, categories }: NavbarProps) {
             height={680}
             className="w-full rounded-none border-0 shadow-none"
           />
-          {mobileLinks.length > 0 && (
-            <div className="border-t border-secondary-200 px-4 py-4">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary-400">
-                Điều hướng nhanh
-              </p>
-              <div className="flex flex-col gap-2">
-                {mobileLinks.map((link) => (
-                  <Link
-                    key={link.id}
-                    href={link.url}
-                    target={link.target === "_blank" ? "_blank" : undefined}
-                    rel={link.target === "_blank" ? "noopener noreferrer" : undefined}
-                    className="text-sm font-medium text-secondary-700 transition-colors hover:text-primary-600"
-                    onClick={() => setDrawerOpen(false)}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
+          <div className="border-t border-secondary-200 px-4 py-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary-400">
+              Điều hướng nhanh
+            </p>
+            <div className="flex flex-col gap-2">
+              <Link
+                href="/community/builds"
+                onClick={() => setDrawerOpen(false)}
+                className="inline-flex items-center gap-2 text-sm font-medium text-secondary-700 transition-colors hover:text-primary-600"
+              >
+                <UserGroupIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                Cộng đồng Build PC
+              </Link>
+              {mobileLinks.map((link) => (
+                <Link
+                  key={link.id}
+                  href={link.url}
+                  target={link.target === "_blank" ? "_blank" : undefined}
+                  rel={link.target === "_blank" ? "noopener noreferrer" : undefined}
+                  className="text-sm font-medium text-secondary-700 transition-colors hover:text-primary-600"
+                  onClick={() => setDrawerOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              ))}
             </div>
-          )}
+          </div>
         </div>
       </Drawer>
 

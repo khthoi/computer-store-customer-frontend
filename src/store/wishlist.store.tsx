@@ -73,7 +73,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     dispatch({ type: "SET_LOADING", payload: true });
     try {
-      const wishlist: Wishlist = await WishlistService.getWishlist();
+      const wishlist: Wishlist = await WishlistService.getWishlist({ limit: 1000 });
       dispatch({ type: "HYDRATE", payload: wishlist.items ?? [] });
     } catch {
       dispatch({ type: "HYDRATE", payload: [] });

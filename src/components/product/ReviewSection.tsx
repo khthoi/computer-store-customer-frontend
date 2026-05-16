@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StarIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/src/components/ui/Button";
 import { Pagination } from "@/src/components/navigation/Pagination";
 import { RatingStars } from "@/src/components/product/RatingStars";
 import { ReviewCard, type Review } from "@/src/components/product/ReviewCard";
 import { ReviewFormModal } from "@/src/components/product/ReviewFormModal";
+import { getProductReviews } from "@/src/services/product-detail.service";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,19 +48,47 @@ export function ReviewSection({
   const [specialFilter, setSpecialFilter] = useState<SpecialFilter | null>(null);
   const [page, setPage] = useState(1);
   const [isReviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviews, setReviews] = useState<Review[]>(initialReviews);
+  // Filtered total — drives the Pagination button count. Starts equal to the
+  // unfiltered total (rendered by the parent) and is replaced by every fetch.
+  const [filteredTotal, setFilteredTotal] = useState<number>(totalReviews);
+  const [loadingPage, setLoadingPage] = useState(false);
+  const isFirstRender = useRef(true);
 
-  // Client-side filter (in real app, this would be server-side)
-  const filteredReviews = initialReviews.filter((r) => {
-    if (starFilter !== 0 && r.rating !== starFilter) return false;
-    if (specialFilter === "images" && !r.images?.length) return false;
-    return true;
-  });
+  const totalPages = Math.max(1, Math.ceil(filteredTotal / REVIEWS_PER_PAGE));
 
-  const totalPages = Math.max(1, Math.ceil(filteredReviews.length / REVIEWS_PER_PAGE));
-  const paginatedReviews = filteredReviews.slice(
-    (page - 1) * REVIEWS_PER_PAGE,
-    page * REVIEWS_PER_PAGE
-  );
+  // Refetch whenever page OR a filter changes. Filters are applied server-side
+  // so paginating across all filtered results works correctly.
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    let cancelled = false;
+    setLoadingPage(true);
+    getProductReviews(productId, page, REVIEWS_PER_PAGE, {
+      rating: starFilter === 0 ? undefined : starFilter,
+      hasImages: specialFilter === "images" ? true : undefined,
+    })
+      .then((result) => {
+        if (cancelled) return;
+        setReviews(result.items);
+        setFilteredTotal(result.total);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setReviews([]);
+        setFilteredTotal(0);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPage(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [page, productId, starFilter, specialFilter]);
+
+  const paginatedReviews = reviews;
 
   const handleStarFilter = useCallback(
     (star: StarFilter) => {
@@ -222,7 +251,12 @@ export function ReviewSection({
 
         {/* Review list */}
         {paginatedReviews.length > 0 ? (
-          <div className="flex flex-col gap-4">
+          <div
+            className={[
+              "flex flex-col gap-4 transition-opacity",
+              loadingPage ? "opacity-50" : "opacity-100",
+            ].join(" ")}
+          >
             {paginatedReviews.map((review) => (
               <ReviewCard key={review.id} review={review} />
             ))}

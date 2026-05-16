@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { ToastMessage } from "@/src/components/ui/Toast";
+import { createReturn } from "@/src/services/account-return.service";
 import { ReturnWizardNav } from "./ReturnWizardNav";
 import { ReturnSuccessCard } from "./ReturnSuccessCard";
 import { Step1SelectProducts } from "./steps/Step1SelectProducts";
@@ -12,11 +13,11 @@ import type {
   WizardState,
   Step1Errors,
   Step2Errors,
-} from "@/src/app/(storefront)/account/returns/_mock_data";
+} from "@/src/types/account-return.types";
 import type {
-  OrderSummary,
-  OrderItem,
-} from "@/src/app/(storefront)/account/orders/_mock_data";
+  OrderDetail,
+  OrderDetailItem,
+} from "@/src/types/account-order.types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -37,9 +38,9 @@ const INITIAL_STATE: WizardState = {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ReturnRequestPageInnerProps {
-  order: OrderSummary;
+  order: OrderDetail;
   /** Only the items the user may still return (pre-filtered for eligibility) */
-  eligibleItems: OrderItem[];
+  eligibleItems: OrderDetailItem[];
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -149,16 +150,43 @@ export function ReturnRequestPageInner({
   const handleSubmit = useCallback(async () => {
     setIsSubmitting(true);
     try {
-      await new Promise<void>((resolve) => setTimeout(resolve, 1200));
-      setReturnRequestId("YC-" + Date.now().toString().slice(-6));
+      const itemMap = new Map(
+        order.items.map((it) => [it.id, Number(it.variantId)]),
+      );
+      const items = wizardState.selectedItems
+        .map((s) => {
+          const variantId = itemMap.get(s.itemId);
+          return variantId
+            ? { variantId, quantity: s.returnQuantity }
+            : null;
+        })
+        .filter((v): v is { variantId: number; quantity: number } => v !== null);
+
+      if (!wizardState.reason || !wizardState.resolution) {
+        throw new Error("Thiếu lý do hoặc phương án xử lý.");
+      }
+
+      const result = await createReturn({
+        orderNumericId: order.numericId,
+        reason: wizardState.reason,
+        resolution: wizardState.resolution,
+        description: wizardState.description,
+        items,
+        images: wizardState.files
+          .filter((f) => !f.error)
+          .map((f) => f.file),
+      });
+      setReturnRequestId(result.id);
       setSubmitted(true);
-    } catch {
-      setToastMessage("Đã xảy ra lỗi. Vui lòng thử lại.");
+    } catch (err) {
+      setToastMessage(
+        err instanceof Error ? err.message : "Đã xảy ra lỗi. Vui lòng thử lại.",
+      );
       setToastVisible(true);
     } finally {
       setIsSubmitting(false);
     }
-  }, []);
+  }, [order.items, order.numericId, wizardState]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 

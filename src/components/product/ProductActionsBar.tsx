@@ -9,12 +9,20 @@ import {
 } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartSolidIcon } from "@heroicons/react/24/solid";
 import { useToast } from "@/src/components/ui/Toast";
+import { useAuth } from "@/src/store/auth.store";
+import { useWishlist } from "@/src/store/wishlist.store";
+import { useCompare } from "@/src/store/compare.store";
+import { getCompareVariantById } from "@/src/services/compare.service";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ProductActionsBarProps {
   productId: string;
   productName: string;
+  /** Product slug — used to fetch CompareProduct on add */
+  productSlug: string;
+  /** Currently selected variant id (null while resolving / no variant chosen) */
+  variantId: number | null;
 }
 
 // ─── Tooltip helper ───────────────────────────────────────────────────────────
@@ -30,51 +38,133 @@ function ActionTooltip({ label }: { label: string }) {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 /**
- * ProductActionsBar — unified Wishlist / Compare / Share action strip for a
- * product detail page.
+ * ProductActionsBar — unified Wishlist / Compare / Share strip.
  *
- * - **Wishlist**: toggle with heart bounce animation + toast feedback.
- * - **Compare**: toggle with scale animation + toast feedback.
- * - **Share**: copies current URL to clipboard; shows momentary "copied" state
- *   with scale animation and tooltip feedback, then auto-resets after 2 s.
- *
- * All toasts are dispatched through `useToast()` so they stack correctly in
- * the global `<ToastProvider>` container.
+ * - **Wishlist**: persistent via WishlistContext (variant-scoped). Toggle adds
+ *   or removes the *currently selected* variant. Requires authentication.
+ * - **Compare**: persistent via CompareContext (variant-scoped, localStorage).
+ *   On add, fetches the rich CompareProduct (specs + category) so the
+ *   `/compare` page can render rows correctly. Toggle removes when already in.
+ * - **Share**: copies current URL to clipboard with momentary "copied" state.
  */
 export function ProductActionsBar({
   productId: _productId,
-  productName: _productName,
+  productName,
+  productSlug,
+  variantId,
 }: ProductActionsBarProps) {
   const { showToast } = useToast();
+  const { state: authState, openModal: openAuthModal } = useAuth();
+  const isLoggedIn = authState.status === "authenticated";
 
-  const [isWishlisted, setIsWishlisted] = useState(false);
-  const [isCompared, setIsCompared] = useState(false);
+  const { hasVariant, addItem: addWishlist, removeItem: removeWishlist } = useWishlist();
+  const {
+    state: compareState,
+    addProduct: addCompare,
+    removeProduct: removeCompare,
+  } = useCompare();
+
+  // Derived states — reflect current store
+  const isWishlisted = variantId != null && hasVariant(variantId);
+  const isCompared =
+    variantId != null && compareState.compareList.some((p) => p.id === String(variantId));
+
+  const [wishlistBusy, setWishlistBusy] = useState(false);
+  const [compareBusy, setCompareBusy] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const copyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Clean up the copy-reset timer on unmount
   useEffect(() => {
     return () => {
       if (copyResetRef.current) clearTimeout(copyResetRef.current);
     };
   }, []);
 
-  const handleWishlist = useCallback(() => {
-    const next = !isWishlisted;
-    setIsWishlisted(next);
-    showToast(
-      next ? "Đã thêm vào danh sách yêu thích" : "Đã bỏ khỏi danh sách yêu thích"
-    );
-  }, [isWishlisted, showToast]);
+  // ── Wishlist ──────────────────────────────────────────────────────────────
 
-  const handleCompare = useCallback(() => {
-    const next = !isCompared;
-    setIsCompared(next);
-    showToast(
-      next ? "Đã thêm vào danh sách so sánh" : "Đã bỏ khỏi danh sách so sánh",
-      "info"
-    );
-  }, [isCompared, showToast]);
+  const handleWishlist = useCallback(async () => {
+    if (wishlistBusy) return;
+    if (variantId == null) {
+      showToast("Vui lòng chọn phiên bản sản phẩm.", "error");
+      return;
+    }
+    if (!isLoggedIn) {
+      openAuthModal("login", `/products/${productSlug}`);
+      showToast("Vui lòng đăng nhập để dùng danh sách yêu thích.", "info");
+      return;
+    }
+    setWishlistBusy(true);
+    try {
+      if (isWishlisted) {
+        await removeWishlist(variantId);
+        showToast("Đã bỏ khỏi danh sách yêu thích", "info");
+      } else {
+        await addWishlist(variantId);
+        showToast("Đã thêm vào danh sách yêu thích", "success");
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Không thể cập nhật danh sách yêu thích.";
+      showToast(message, "error");
+    } finally {
+      setWishlistBusy(false);
+    }
+  }, [
+    wishlistBusy,
+    variantId,
+    isLoggedIn,
+    isWishlisted,
+    addWishlist,
+    removeWishlist,
+    openAuthModal,
+    productSlug,
+    showToast,
+  ]);
+
+  // ── Compare ───────────────────────────────────────────────────────────────
+
+  const handleCompare = useCallback(async () => {
+    if (compareBusy) return;
+    if (variantId == null) {
+      showToast("Vui lòng chọn phiên bản sản phẩm.", "error");
+      return;
+    }
+    const id = String(variantId);
+    if (isCompared) {
+      removeCompare(id);
+      showToast("Đã bỏ khỏi danh sách so sánh", "info");
+      return;
+    }
+    setCompareBusy(true);
+    try {
+      const compareProduct = await getCompareVariantById({
+        productSlug,
+        variantId: id,
+      });
+      if (!compareProduct) {
+        showToast("Sản phẩm này hiện chưa hỗ trợ so sánh.", "error");
+        return;
+      }
+      addCompare(compareProduct);
+      // Note: CompareProvider shows its own toast on add/limit hit.
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Không thể thêm vào danh sách so sánh.";
+      showToast(message, "error");
+    } finally {
+      setCompareBusy(false);
+    }
+  }, [
+    compareBusy,
+    variantId,
+    isCompared,
+    addCompare,
+    removeCompare,
+    productSlug,
+    showToast,
+  ]);
+
+  // ── Share ─────────────────────────────────────────────────────────────────
 
   const handleShare = useCallback(async () => {
     if (isCopied) return;
@@ -84,9 +174,12 @@ export function ProductActionsBar({
       if (copyResetRef.current) clearTimeout(copyResetRef.current);
       copyResetRef.current = setTimeout(() => setIsCopied(false), 2000);
     } catch {
-      // clipboard write failed silently — tooltip remains unchanged
+      // clipboard write failed silently
     }
   }, [isCopied]);
+
+  // Reference so unused-vars lint stays quiet
+  void productName;
 
   return (
     <div className="flex items-center gap-1">
@@ -97,9 +190,10 @@ export function ProductActionsBar({
           type="button"
           aria-label="Thêm vào danh sách yêu thích"
           aria-pressed={isWishlisted}
+          disabled={wishlistBusy}
           onClick={handleWishlist}
           className={[
-            "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+            "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60",
             isWishlisted
               ? "text-error-500 hover:bg-error-50"
               : "text-secondary-600 hover:bg-secondary-100 hover:text-error-500",
@@ -127,9 +221,10 @@ export function ProductActionsBar({
           type="button"
           aria-label="So sánh sản phẩm"
           aria-pressed={isCompared}
+          disabled={compareBusy}
           onClick={handleCompare}
           className={[
-            "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+            "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60",
             isCompared
               ? "bg-primary-50 text-primary-600 hover:bg-primary-100"
               : "text-secondary-600 hover:bg-secondary-100 hover:text-primary-600",

@@ -4,7 +4,7 @@ import { StarIcon as StarSolid } from "@heroicons/react/24/solid";
 import { StarIcon as StarOutline } from "@heroicons/react/24/outline";
 import { Modal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
-import type { OrderReview } from "@/src/app/(storefront)/account/orders/_mock_data";
+import type { OrderReview } from "@/src/types/account-order.types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

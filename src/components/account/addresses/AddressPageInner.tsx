@@ -1,13 +1,20 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/src/components/ui/Button";
 import { ToastMessage } from "@/src/components/ui/Toast";
 import { AddressCard } from "@/src/components/account/addresses/AddressCard";
 import { AddressFormModal } from "@/src/components/account/addresses/AddressFormModal";
 import { DeleteAddressDialog } from "@/src/components/account/addresses/DeleteAddressDialog";
-import type { Address } from "@/src/app/(storefront)/account/addresses/_mock_data";
+import {
+  createAddress,
+  deleteAddress,
+  setDefaultAddress,
+  updateAddress,
+} from "@/src/services/account-address.service";
+import type { Address } from "@/src/types/account-address.types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -16,6 +23,8 @@ type AddressFormData = Omit<Address, "id" | "isDefault"> & { isDefault: boolean 
 export interface AddressPageInnerProps {
   initialAddresses: Address[];
 }
+
+const MAX_ADDRESSES = 3;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -26,6 +35,7 @@ export interface AddressPageInnerProps {
  * and a toast notification after each mutation.
  */
 export function AddressPageInner({ initialAddresses }: AddressPageInnerProps) {
+  const router = useRouter();
   const [addresses, setAddresses] = useState<Address[]>(initialAddresses);
 
   // ── Modal state ───────────────────────────────────────────────────────────
@@ -56,6 +66,13 @@ export function AddressPageInner({ initialAddresses }: AddressPageInnerProps) {
   };
 
   const handleAddNew = () => {
+    if (addresses.length >= MAX_ADDRESSES) {
+      showToast(
+        "error",
+        `Bạn chỉ có thể lưu tối đa ${MAX_ADDRESSES} địa chỉ giao hàng. Hãy xóa bớt địa chỉ cũ trước khi thêm mới.`,
+      );
+      return;
+    }
     setEditingAddress(null);
     setFormModalOpen(true);
   };
@@ -64,43 +81,43 @@ export function AddressPageInner({ initialAddresses }: AddressPageInnerProps) {
     async (data: AddressFormData, id?: string) => {
       setIsSaving(true);
       try {
-        await new Promise<void>((r) => setTimeout(r, 700));
+        let saved: Address;
+        if (id) {
+          saved = await updateAddress(id, data);
+          if (data.isDefault) {
+            saved = await setDefaultAddress(id);
+          }
+        } else {
+          saved = await createAddress(data);
+          if (data.isDefault && !saved.isDefault) {
+            saved = await setDefaultAddress(saved.id);
+          }
+        }
 
         setAddresses((prev) => {
-          let next: Address[];
-
-          if (id) {
-            // Edit existing
-            next = prev.map((a) =>
-              a.id === id ? { ...a, ...data } : a
-            );
-          } else {
-            // Add new — generate a local id
-            const newAddr: Address = {
-              ...data,
-              id: `addr-${Date.now()}`,
-            };
-            next = [...prev, newAddr];
+          const exists = prev.some((a) => a.id === saved.id);
+          let next = exists
+            ? prev.map((a) => (a.id === saved.id ? saved : a))
+            : [...prev, saved];
+          if (saved.isDefault) {
+            next = next.map((a) => ({ ...a, isDefault: a.id === saved.id }));
           }
-
-          // Ensure only one default
-          if (data.isDefault) {
-            next = next.map((a) => ({
-              ...a,
-              isDefault: a.id === (id ?? next[next.length - 1]?.id),
-            }));
-          }
-
           return next;
         });
 
         setFormModalOpen(false);
         showToast("success", id ? "Địa chỉ đã được cập nhật." : "Địa chỉ mới đã được thêm.");
+        router.refresh();
+      } catch (err) {
+        showToast(
+          "error",
+          err instanceof Error ? err.message : "Lưu địa chỉ thất bại.",
+        );
       } finally {
         setIsSaving(false);
       }
     },
-    []
+    [router],
   );
 
   const handleDeleteRequest = (address: Address) => {
@@ -108,24 +125,45 @@ export function AddressPageInner({ initialAddresses }: AddressPageInnerProps) {
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = useCallback(async (id: string) => {
-    setIsDeleting(true);
-    try {
-      await new Promise<void>((r) => setTimeout(r, 600));
-      setAddresses((prev) => prev.filter((a) => a.id !== id));
-      setDeleteDialogOpen(false);
-      showToast("success", "Địa chỉ đã được xóa.");
-    } finally {
-      setIsDeleting(false);
-    }
-  }, []);
+  const handleDeleteConfirm = useCallback(
+    async (id: string) => {
+      setIsDeleting(true);
+      try {
+        await deleteAddress(id);
+        setAddresses((prev) => prev.filter((a) => a.id !== id));
+        setDeleteDialogOpen(false);
+        showToast("success", "Địa chỉ đã được xóa.");
+        router.refresh();
+      } catch (err) {
+        showToast(
+          "error",
+          err instanceof Error ? err.message : "Xóa địa chỉ thất bại.",
+        );
+      } finally {
+        setIsDeleting(false);
+      }
+    },
+    [router],
+  );
 
-  const handleSetDefault = useCallback((id: string) => {
-    setAddresses((prev) =>
-      prev.map((a) => ({ ...a, isDefault: a.id === id }))
-    );
-    showToast("success", "Đã đặt địa chỉ mặc định.");
-  }, []);
+  const handleSetDefault = useCallback(
+    async (id: string) => {
+      try {
+        await setDefaultAddress(id);
+        setAddresses((prev) =>
+          prev.map((a) => ({ ...a, isDefault: a.id === id })),
+        );
+        showToast("success", "Đã đặt địa chỉ mặc định.");
+        router.refresh();
+      } catch (err) {
+        showToast(
+          "error",
+          err instanceof Error ? err.message : "Cập nhật mặc định thất bại.",
+        );
+      }
+    },
+    [router],
+  );
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -133,14 +171,33 @@ export function AddressPageInner({ initialAddresses }: AddressPageInnerProps) {
     <div className="rounded-2xl border border-secondary-200 bg-white p-6">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-lg font-bold text-secondary-900">
-          Địa chỉ giao hàng
-        </h1>
+        <div className="flex items-baseline gap-2">
+          <h1 className="text-lg font-bold text-secondary-900">
+            Địa chỉ giao hàng
+          </h1>
+          <span
+            className={[
+              "text-xs font-medium tabular-nums",
+              addresses.length >= MAX_ADDRESSES
+                ? "text-error-600"
+                : "text-secondary-500",
+            ].join(" ")}
+            aria-label={`Đang dùng ${addresses.length} trên ${MAX_ADDRESSES} địa chỉ`}
+          >
+            ({addresses.length}/{MAX_ADDRESSES})
+          </span>
+        </div>
         <Button
           variant="primary"
           size="sm"
           leftIcon={<PlusIcon />}
           onClick={handleAddNew}
+          disabled={addresses.length >= MAX_ADDRESSES}
+          title={
+            addresses.length >= MAX_ADDRESSES
+              ? `Tối đa ${MAX_ADDRESSES} địa chỉ — hãy xóa bớt để thêm mới`
+              : undefined
+          }
         >
           Thêm địa chỉ
         </Button>

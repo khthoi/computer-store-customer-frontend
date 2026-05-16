@@ -1,6 +1,8 @@
 "use client";
 
 import { ProductCard, type ProductCardProps } from "./ProductCard";
+import { ProductCardConnected } from "./ProductCardConnected";
+import type { StorefrontProductCardDto } from "@/src/types/storefront-product-card.types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,6 +46,12 @@ export interface ProductCardListProps {
     wishlisted: boolean,
     selectedVariants: Record<string, string>
   ) => void;
+  /**
+   * When provided, the list renders `ProductCardConnected` for each DTO so that
+   * cart / wishlist / compare actions are wired automatically.
+   * `products` is ignored in this mode — pass either `products` OR `dtos`.
+   */
+  dtos?: StorefrontProductCardDto[];
   className?: string;
 }
 
@@ -84,8 +92,32 @@ export function ProductCardList({
   onCompare,
   onAddToCart,
   onWishlistToggle,
+  dtos,
   className = "",
 }: ProductCardListProps) {
+  if (dtos && dtos.length > 0) {
+    const gridClass =
+      gap === "md"
+        ? GRID_CLASSES[itemsPerRow]
+        : GRID_CLASSES[itemsPerRow].replace("gap-3", GAP_CLASSES[gap]);
+    if (viewMode === "list") {
+      return (
+        <div className={["flex flex-col gap-3", className].filter(Boolean).join(" ")}>
+          {dtos.map((dto) => (
+            <ProductCardConnected key={dto.variantId || dto.id} dto={dto} variant="list" />
+          ))}
+        </div>
+      );
+    }
+    return (
+      <div className={[gridClass, className].filter(Boolean).join(" ")}>
+        {dtos.map((dto) => (
+          <ProductCardConnected key={dto.variantId || dto.id} dto={dto} />
+        ))}
+      </div>
+    );
+  }
+
   if (products.length === 0) return null;
 
   const sharedHandlers = {

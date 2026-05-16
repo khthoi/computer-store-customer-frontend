@@ -7,7 +7,6 @@ import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { CompareHeaderCard } from "@/src/components/compare-ui/CompareHeaderCard";
 import { useCompare } from "@/src/store/compare.store";
-import { CATEGORY_LABELS } from "@/src/components/compare-ui/types";
 
 const MAX_COMPARE = 4;
 
@@ -22,7 +21,8 @@ const MAX_COMPARE = 4;
  */
 export function CompareBar() {
   const { state, removeProduct, clearAll, openDrawer } = useCompare();
-  const { compareList, activeCategory } = state;
+  const { compareList } = state;
+  const activeCategoryLabel = compareList[0]?.rootCategoryName ?? null;
   const barRef = useRef<HTMLDivElement>(null);
 
   // Publish bar height as a CSS custom property on <body>
@@ -90,9 +90,9 @@ export function CompareBar() {
 
         {/* ── Right: category indicator + clear button ── */}
         <div className="flex shrink-0 items-center gap-3">
-          {activeCategory && (
+          {activeCategoryLabel && (
             <Badge variant="primary" size="sm" dot>
-              {CATEGORY_LABELS[activeCategory]}
+              {activeCategoryLabel}
             </Badge>
           )}
 

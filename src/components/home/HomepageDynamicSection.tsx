@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { ProductCard } from "@/src/components/product/ProductCard";
+import { ProductCardConnected } from "@/src/components/product/ProductCardConnected";
 import { HomepageProductCarousel } from "./HomepageProductCarousel";
-import { toProductCardProps } from "@/src/types/storefront-product-card.types";
 import type {
   StorefrontHomepageSection,
   StorefrontSectionLayout,
@@ -105,7 +104,7 @@ export function HomepageDynamicSection({ section }: HomepageDynamicSectionProps)
         ) : (
           <div className={gridClass}>
             {section.products.map((p) => (
-              <ProductCard key={p.variantId} {...toProductCardProps(p)} />
+              <ProductCardConnected key={p.variantId} dto={p} />
             ))}
           </div>
         )}

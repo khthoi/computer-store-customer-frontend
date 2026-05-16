@@ -8,6 +8,8 @@ export interface BuildPCSlotDef {
   slotType: string;
   isRequired: boolean;
   sortOrder: number;
+  /** Max quantity allowed in this slot (e.g. 2 for dual RAM, 1 for CPU). */
+  maxQuantity: number;
   categoryId: number | null;
   categorySlug: string | null;
   description?: string | null;
@@ -60,6 +62,7 @@ export async function getBuildPCSlots(): Promise<BuildPCSlotDef[]> {
       slotType: s.maKhe,
       isRequired: Boolean(s.batBuoc),
       sortOrder: s.thuTu,
+      maxQuantity: Math.max(1, Number(s.soLuong) || 1),
       categoryId: s.danhMucId ?? null,
       categorySlug: s.danhMucSlug || null,
       description: s.moTa ?? null,
@@ -192,13 +195,14 @@ export async function getBuildPCProductList(
 
 export async function checkCompatibility(
   variantIds: number[],
+  quantities?: number[],
 ): Promise<CompatibilityCheckResult> {
   if (variantIds.length < 2) return { compatible: true, issues: [] };
   return storefrontApiFetch<CompatibilityCheckResult>(
     "/build-pc/check-compatibility",
     {
       method: "POST",
-      body: JSON.stringify({ phienBanIds: variantIds }),
+      body: JSON.stringify({ phienBanIds: variantIds, soLuongs: quantities }),
       cache: "no-store",
     },
   );

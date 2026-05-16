@@ -3,7 +3,7 @@
 import { PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
-import type { Address } from "@/src/app/(storefront)/account/addresses/_mock_data";
+import type { Address } from "@/src/types/account-address.types";
 
 interface AddressCardProps {
   address: Address;

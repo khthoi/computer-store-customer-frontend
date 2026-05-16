@@ -17,14 +17,59 @@ import { OrderShippingCard } from "@/src/components/account/orders/OrderShipping
 import { OrderCancelModal } from "@/src/components/account/orders/OrderCancelModal";
 import { OrderReviewModal } from "@/src/components/account/orders/OrderReviewModal";
 import { ToastMessage } from "@/src/components/ui/Toast";
+import { cancelOrder } from "@/src/services/account-order.service";
 import type {
   OrderDetail,
   OrderDetailItem,
   OrderStatus,
   TimelineEvent,
-} from "@/src/app/(storefront)/account/orders/[orderId]/_mock_data";
+} from "@/src/types/account-order.types";
 
 // ─── Sub-component: single item row ───────────────────────────────────────────
+
+const MAX_VISIBLE_BRANDS = 3;
+
+function BrandsRow({ brands }: { brands: string[] }) {
+  if (!brands.length) return null;
+  const visible = brands.slice(0, MAX_VISIBLE_BRANDS);
+  const hidden = brands.slice(MAX_VISIBLE_BRANDS);
+  const hasOverflow = hidden.length > 0;
+  return (
+    <Tooltip content={brands.join(" • ")} placement="top" delay={300}>
+      <div className="flex items-center gap-1 overflow-hidden">
+        {visible.map((b) => (
+          <span
+            key={b}
+            className="shrink-0 inline-flex max-w-[120px] items-center rounded bg-secondary-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-secondary-500 truncate"
+          >
+            {b}
+          </span>
+        ))}
+        {hasOverflow && (
+          <span
+            aria-label={`Còn ${hidden.length} thương hiệu khác`}
+            className="shrink-0 inline-flex items-center rounded bg-secondary-100 px-1.5 py-0.5 text-[10px] font-semibold text-secondary-500"
+          >
+            …
+          </span>
+        )}
+      </div>
+    </Tooltip>
+  );
+}
+
+function CategoryRow({ name }: { name: string }) {
+  if (!name) return null;
+  return (
+    <div className="flex max-w-full overflow-hidden">
+      <Tooltip content={name} placement="top" delay={300}>
+        <span className="inline-block max-w-full truncate rounded bg-primary-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary-600">
+          {name}
+        </span>
+      </Tooltip>
+    </div>
+  );
+}
 
 function OrderItemRow({ item }: { item: OrderDetailItem }) {
   const hasDiscount =
@@ -52,9 +97,15 @@ function OrderItemRow({ item }: { item: OrderDetailItem }) {
 
       {/* Info block */}
       <div className="flex-1 min-w-0">
-        <span className="inline-flex items-center rounded bg-secondary-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-secondary-500">
-          {item.brand}
-        </span>
+        {/* Brands row — separate pills, single line, "…" + tooltip on overflow */}
+        <BrandsRow brands={item.brands} />
+
+        {/* Category row — single pill, truncate + tooltip on overflow */}
+        {item.categoryName && (
+          <div className="mt-0.5">
+            <CategoryRow name={item.categoryName} />
+          </div>
+        )}
 
         {/* 2-line clamped product name with tooltip */}
         <div className="mt-0.5 line-clamp-2">
@@ -69,7 +120,12 @@ function OrderItemRow({ item }: { item: OrderDetailItem }) {
         </div>
 
         {item.variantLabel && (
-          <p className="mt-0.5 text-xs text-secondary-500">{item.variantLabel}</p>
+          <p className="mt-0.5 mb-0 text-xs text-secondary-500">{item.variantLabel}</p>
+        )}
+        {item.sku && (
+          <p className="mt-0.5 text-[11px] font-mono text-secondary-400">
+            SKU: {item.sku}
+          </p>
         )}
       </div>
 
@@ -235,6 +291,7 @@ export function OrderDetailPageInner({
   const [isCancelling, setIsCancelling] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState("Đơn hàng đã được hủy thành công.");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
   const [reviewModalOpen, setReviewModalOpen] = useState(initialReviewOpen);
 
   const canCancel = localStatus === "pending";
@@ -247,18 +304,25 @@ export function OrderDetailPageInner({
     async (reason: string) => {
       setIsCancelling(true);
       try {
-        await new Promise<void>((resolve) => setTimeout(resolve, 800));
+        await cancelOrder(order.numericId);
         setLocalStatus("cancelled");
         setLocalTimeline(buildCancelledTimeline(order.timeline, reason));
         setLocalCancelReason(reason);
         setCancelModalOpen(false);
         setToastMessage("Đơn hàng đã được hủy thành công.");
+        setToastType("success");
+        setToastVisible(true);
+      } catch (err) {
+        setToastMessage(
+          err instanceof Error ? err.message : "Hủy đơn thất bại.",
+        );
+        setToastType("error");
         setToastVisible(true);
       } finally {
         setIsCancelling(false);
       }
     },
-    [order.timeline]
+    [order.numericId, order.timeline]
   );
 
   const placedAtFormatted = new Date(order.placedAt).toLocaleDateString("vi-VN", {
@@ -315,9 +379,11 @@ export function OrderDetailPageInner({
             </Button>
           )}
           {canReturn && (
-            <Button variant="outline" size="sm" leftIcon={<ArrowUturnLeftIcon />}>
-              Yêu cầu hoàn trả
-            </Button>
+            <Link href={`/account/orders/${order.numericId}/returns/new`}>
+              <Button variant="outline" size="sm" leftIcon={<ArrowUturnLeftIcon />}>
+                Yêu cầu hoàn trả
+              </Button>
+            </Link>
           )}
           {canReview && (
             <Button
@@ -398,6 +464,12 @@ export function OrderDetailPageInner({
         onAllSubmitted={() => {
           setReviewModalOpen(false);
           setToastMessage("Cảm ơn! Đánh giá của bạn đã được ghi nhận.");
+          setToastType("success");
+          setToastVisible(true);
+        }}
+        onSubmitError={(message) => {
+          setToastMessage(message);
+          setToastType("error");
           setToastVisible(true);
         }}
       />
@@ -405,7 +477,7 @@ export function OrderDetailPageInner({
       {/* ── Success toast ─────────────────────────────────────────────────── */}
       <ToastMessage
         isVisible={toastVisible}
-        type="success"
+        type={toastType}
         message={toastMessage}
         position="top-right"
         duration={4000}

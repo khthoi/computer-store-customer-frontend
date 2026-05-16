@@ -10,15 +10,15 @@
  */
 
 import { useAuth } from "@/src/store/auth.store";
-import { useCart } from "@/src/store/cart.store";
 import { useWishlist } from "@/src/store/wishlist.store";
 import { useCompareCount } from "@/src/hooks/useCompareCount";
+import { useServerCartCount } from "@/src/hooks/useServerCartCount";
 import { Header } from "./Header";
 import type { StorefrontLayoutData } from "@/src/types/storefront-layout.types";
 
 export function ConnectedHeader({ layoutData }: { layoutData: StorefrontLayoutData }) {
   const { state: authState, logout } = useAuth();
-  const { state: cartState } = useCart();
+  const cartCount = useServerCartCount();
   const { count: wishlistCount } = useWishlist();
   const compareCount = useCompareCount();
 
@@ -28,7 +28,7 @@ export function ConnectedHeader({ layoutData }: { layoutData: StorefrontLayoutDa
 
   return (
     <Header
-      cartCount={cartState.items.reduce((sum, i) => sum + i.quantity, 0)}
+      cartCount={cartCount}
       wishlistCount={wishlistCount}
       compareCount={compareCount}
       user={user}

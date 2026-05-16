@@ -1,10 +1,7 @@
 "use client";
 
 import { ProductCardList } from "@/src/components/product/ProductCardList";
-import {
-  toProductCardProps,
-  type StorefrontProductCardDto,
-} from "@/src/types/storefront-product-card.types";
+import type { StorefrontProductCardDto } from "@/src/types/storefront-product-card.types";
 
 export interface PromotionProductsProps {
   products: StorefrontProductCardDto[];
@@ -37,7 +34,6 @@ export function PromotionProducts({
 
   const visible = products.slice(0, maxItems);
   const remaining = products.length - visible.length;
-  const cards = visible.map((dto) => toProductCardProps(dto));
 
   return (
     <div>
@@ -49,7 +45,7 @@ export function PromotionProducts({
           </span>
         ) : null}
       </div>
-      <ProductCardList products={cards} itemsPerRow={6} gap="sm" />
+      <ProductCardList products={[]} dtos={visible} itemsPerRow={6} gap="sm" />
     </div>
   );
 }

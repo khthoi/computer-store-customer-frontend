@@ -96,9 +96,9 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(function Radio(
 
   return (
     <div className={disabled ? `opacity-60 ${className}` : className}>
-      <div className="flex items-start gap-3">
+      <div className="flex items-center gap-3">
         {/* Input + custom visual */}
-        <div className={`relative mt-0.5 shrink-0 ${DOT[size]}`}>
+        <div className={`relative shrink-0 ${DOT[size]}`}>
           {/* Native input: transparent overlay */}
           <input
             ref={ref}

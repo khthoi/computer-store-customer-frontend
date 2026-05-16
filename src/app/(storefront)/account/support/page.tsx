@@ -1,28 +1,37 @@
 import { SupportPageInner } from "@/src/components/account/support/SupportPageInner";
-import {
-  SUPPORT_TICKETS,
-} from "@/src/app/(storefront)/account/support/_mock_data";
-import { MOCK_ORDERS } from "@/src/app/(storefront)/account/orders/_mock_data";
-import type { SelectOption } from "@/src/components/ui/Select";
+import { getMyTickets } from "@/src/services/account-support.service";
+import { getMyOrders } from "@/src/services/account-order.service";
 
 export const dynamic = "force-dynamic";
 
-/**
- * /account/support
- *
- * Server component — always fresh (force-dynamic).
- * Builds the order select options from MOCK_ORDERS and passes sorted tickets
- * to the client SupportPageInner component.
- */
-export default function SupportPage() {
-  const orderOptions: SelectOption[] = MOCK_ORDERS.map((o) => ({
-    value: o.id,
-    label: `${o.id} — ${o.items[0].name}${o.items.length > 1 ? ` +${o.items.length - 1} sản phẩm khác` : ""}`,
-  }));
+const PAGE_SIZE = 10;
 
-  const sorted = [...SUPPORT_TICKETS].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+interface Props {
+  searchParams: Promise<{ page?: string }>;
+}
+
+export default async function SupportPage({ searchParams }: Props) {
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam ?? 1) || 1);
+
+  const [paginated, ordersResult] = await Promise.all([
+    getMyTickets({ page, limit: PAGE_SIZE }).catch(() => ({
+      items: [],
+      total: 0,
+      page: 1,
+      limit: PAGE_SIZE,
+      totalPages: 0,
+    })),
+    getMyOrders({ limit: 20 }).catch(() => ({ items: [], total: 0, totalPages: 0 })),
+  ]);
+
+  return (
+    <SupportPageInner
+      tickets={paginated.items}
+      page={paginated.page}
+      totalPages={paginated.totalPages}
+      orders={ordersResult.items}
+      totalOrders={ordersResult.total}
+    />
   );
-
-  return <SupportPageInner tickets={sorted} orderOptions={orderOptions} />;
 }

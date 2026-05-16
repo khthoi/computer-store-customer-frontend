@@ -14,11 +14,13 @@ import {
   ShieldCheckIcon,
   ArrowsRightLeftIcon,
   DocumentArrowDownIcon,
+  BookmarkIcon,
 } from "@heroicons/react/24/outline";
 import { PCPartSelector } from "@/src/components/buildpc/PCPartSelector";
 import { PCBuildSummary } from "@/src/components/buildpc/PCBuildSummary";
 import { CompatibilityAlert } from "@/src/components/buildpc/CompatibilityAlert";
 import { BuildPCPartPicker } from "@/src/components/buildpc/BuildPCPartPicker";
+import { SaveBuildModal } from "@/src/components/buildpc/SaveBuildModal";
 import type { SelectedPartInfo } from "@/src/components/buildpc/PCPartSelector";
 import type { BuildSlot } from "@/src/components/buildpc/PCBuildSummary";
 import type { CompatibilityIssue } from "@/src/components/buildpc/CompatibilityAlert";
@@ -26,11 +28,19 @@ import type { CompatibilityStatus } from "@/src/components/buildpc/PCPartCard";
 import type { PartPickerProduct } from "@/src/components/buildpc/PartPickerModal";
 import { Tabs } from "@/src/components/ui/Tabs";
 import { Accordion } from "@/src/components/ui/Accordion";
+import { ToastMessage } from "@/src/components/ui/Toast";
 import {
   getBuildPCSlots,
   checkCompatibility,
   type BuildPCSlotDef,
 } from "@/src/services/storefront-buildpc.service";
+import {
+  createMyBuild,
+  getMyBuilds,
+  getMyBuildDetail,
+  type MySavedBuildDetail,
+} from "@/src/services/account-buildpc.service";
+import { useSearchParams } from "next/navigation";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -39,6 +49,10 @@ interface BuildState {
   name: string;
   selectedParts: Record<string, PartPickerProduct | null>;
   selectedVariants: Record<string, string>;
+  /** Quantity per slot (defaults to 1, bounded by slot.maxQuantity). */
+  selectedQuantities: Record<string, number>;
+  /** Backend SavedBuild ID — present when this tab represents a build saved to the user's account. */
+  savedId?: number;
 }
 
 interface SlotConfig {
@@ -47,6 +61,7 @@ interface SlotConfig {
   icon: ReactNode | string;
   required: boolean;
   slotId: number;
+  maxQuantity: number;
   categoryId: number | null;
   categorySlug: string | null;
 }
@@ -86,6 +101,7 @@ function mapSlotDefsToConfigs(slots: BuildPCSlotDef[]): SlotConfig[] {
     icon: SLOT_ICON_MAP[s.slotType] ?? DEFAULT_SLOT_ICON,
     required: s.isRequired,
     slotId: s.id,
+    maxQuantity: Math.max(1, s.maxQuantity),
     categoryId: s.categoryId,
     categorySlug: s.categorySlug,
   }));
@@ -159,10 +175,11 @@ const INITIAL_BUILD: BuildState = {
   name: "Build 1",
   selectedParts: {},
   selectedVariants: {},
+  selectedQuantities: {},
 };
 
 function makeBuild(id: string, name: string): BuildState {
-  return { id, name, selectedParts: {}, selectedVariants: {} };
+  return { id, name, selectedParts: {}, selectedVariants: {}, selectedQuantities: {} };
 }
 
 /**
@@ -195,6 +212,11 @@ function loadPersisted(): PersistedState | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as PersistedState;
     if (!Array.isArray(parsed.builds) || parsed.builds.length === 0) return null;
+    // Backfill selectedQuantities for builds saved before the field existed
+    parsed.builds = parsed.builds.map((b) => ({
+      ...b,
+      selectedQuantities: b.selectedQuantities ?? {},
+    }));
     return parsed;
   } catch {
     return null;
@@ -210,6 +232,59 @@ function savePersisted(state: PersistedState): void {
   }
 }
 
+// ─── Materializer: backend MySavedBuildDetail → in-page BuildState ──────────────
+
+/**
+ * Convert a backend-saved build into a tab BuildState. Each item becomes a
+ * minimal `PartPickerProduct` (1 variant) keyed by the slot's `maKhe` —
+ * enough for the editor to render and for save/compatibility flows to work.
+ * Caller must have already loaded slotConfigs.
+ */
+function materializeSavedBuild(
+  detail: MySavedBuildDetail,
+  slotConfigs: SlotConfig[],
+): BuildState {
+  const slotByDbId = new Map(slotConfigs.map((s) => [s.slotId, s] as const));
+
+  const selectedParts: Record<string, PartPickerProduct | null> = {};
+  const selectedVariants: Record<string, string> = {};
+  const selectedQuantities: Record<string, number> = {};
+
+  for (const item of detail.chiTiet) {
+    const slot = slotByDbId.get(item.slotId);
+    if (!slot) continue;
+    const key = slot.key;
+    const variantId = String(item.phienBanId);
+    selectedParts[key] = {
+      id: String(item.sanPhamId),
+      name: item.tenSanPham,
+      brand: item.brands[0]?.ten ?? "",
+      thumbnail: item.hinhAnh ?? "https://placehold.co/80x80/f1f5f9/334155?text=PC",
+      price: item.giaBan,
+      href: item.sanPhamSlug ? `/products/${item.sanPhamSlug}?variant=${item.phienBanId}` : undefined,
+      variants: [
+        {
+          value: variantId,
+          label: item.tenPhienBan,
+          price: item.giaBan,
+          stock: 0,
+        },
+      ],
+    };
+    selectedVariants[key] = variantId;
+    selectedQuantities[key] = Math.max(1, item.soLuong);
+  }
+
+  return {
+    id: `saved-${detail.id}`,
+    name: detail.tenBuild,
+    savedId: detail.id,
+    selectedParts,
+    selectedVariants,
+    selectedQuantities,
+  };
+}
+
 // ─── Page ───────────────────────────────────────────────────────────────────────
 
 export default function BuildPCPage() {
@@ -218,9 +293,17 @@ export default function BuildPCPage() {
   const buildCounterRef = useRef(2);
   const [builds, setBuilds] = useState<BuildState[]>([INITIAL_BUILD]);
   const [activeBuildId, setActiveBuildId] = useState<string>(INITIAL_BUILD.id);
+  const savedBuildsLoadedRef = useRef(false);
+  const searchParams = useSearchParams();
+  const requestedBuildId = searchParams?.get("buildId") ?? null;
   const [pickerCategory, setPickerCategory] = useState<string | null>(null);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [exportState, setExportState] = useState<"idle" | "png" | "pdf" | "excel">("idle");
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [savedBuildsCount, setSavedBuildsCount] = useState<number | null>(null);
+  const [toast, setToast] = useState<{ visible: boolean; type: "success" | "error" | "info" | "warning"; message: string }>(
+    { visible: false, type: "success", message: "" },
+  );
 
   // Slot definitions loaded from backend (admin-configured)
   const [slotConfigs, setSlotConfigs] = useState<SlotConfig[]>([]);
@@ -284,25 +367,93 @@ export default function BuildPCPage() {
     };
   }, []);
 
+  // ── Fetch user's saved builds and merge as tabs ──────────────────────────
+  // Runs once after slotConfigs are loaded. If the user isn't logged in or has
+  // no saved builds, we silently keep only the local tabs.
+  useEffect(() => {
+    if (savedBuildsLoadedRef.current) return;
+    if (slotConfigs.length === 0) return; // wait for slots
+    savedBuildsLoadedRef.current = true;
+
+    let cancelled = false;
+    (async () => {
+      let summaries;
+      try {
+        summaries = await getMyBuilds();
+      } catch {
+        return; // unauthed or network — just skip
+      }
+      if (cancelled || summaries.length === 0) return;
+
+      const details = await Promise.all(
+        summaries.map((s) => getMyBuildDetail(s.id).catch(() => null)),
+      );
+      if (cancelled) return;
+
+      const savedTabs: BuildState[] = details
+        .filter((d): d is MySavedBuildDetail => d !== null)
+        .map((d) => materializeSavedBuild(d, slotConfigs));
+
+      // Compute the merged tabs synchronously so we can also fix activeBuildId
+      // to match. We drop any local draft that has zero parts selected — an
+      // empty "Build 1" alongside a saved "Build 1" is just noise.
+      let merged: BuildState[] = [];
+      setBuilds((prev) => {
+        const localWithParts = prev.filter((b) => {
+          if (b.savedId !== undefined) return false;
+          return Object.values(b.selectedParts).some((p) => p != null);
+        });
+        merged = [...savedTabs, ...localWithParts];
+        if (merged.length === 0) merged = [INITIAL_BUILD];
+        return merged;
+      });
+
+      // Honor ?buildId=X deep link by activating the matching saved tab.
+      // Else, if the previously-active tab no longer exists after the merge
+      // (typically the empty draft we just dropped), fall back to the first
+      // tab in the merged list.
+      const target = requestedBuildId
+        ? savedTabs.find((t) => String(t.savedId) === requestedBuildId)
+        : undefined;
+      if (target) {
+        setActiveBuildId(target.id);
+      } else {
+        setActiveBuildId((current) => {
+          const stillExists = merged.some((t) => t.id === current);
+          return stillExists ? current : merged[0]?.id ?? current;
+        });
+      }
+      setSavedBuildsCount(summaries.length);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slotConfigs, requestedBuildId]);
+
   // ── Backend compatibility check on every part-selection change ───────────
   useEffect(() => {
     // Resolve each selected slot → its chosen variantId (preferred) or fall back
     // to the product's defaultVariantId-equivalent if no variant was picked.
-    const variantIds = Object.entries(activeBuild.selectedParts)
+    const entries = Object.entries(activeBuild.selectedParts)
       .filter(([, p]) => p !== null && p !== undefined)
       .map(([slot, p]) => {
         const stored = activeBuild.selectedVariants[slot];
         const v = stored ? p!.variants?.find((x) => x.value === stored) : undefined;
-        return Number(v?.value ?? p!.variants?.[0]?.value ?? p!.id);
+        const id = Number(v?.value ?? p!.variants?.[0]?.value ?? p!.id);
+        const qty = Math.max(1, activeBuild.selectedQuantities[slot] ?? 1);
+        return { id, qty };
       })
-      .filter((n) => Number.isFinite(n) && n > 0);
+      .filter((e) => Number.isFinite(e.id) && e.id > 0);
+    const variantIds = entries.map((e) => e.id);
+    const quantities = entries.map((e) => e.qty);
     if (variantIds.length < 2) {
       setCompatibilityIssues([]);
       setErrorVariantIds(new Set());
       return;
     }
     let cancelled = false;
-    checkCompatibility(variantIds)
+    checkCompatibility(variantIds, quantities)
       .then((res) => {
         if (cancelled) return;
         setCompatibilityIssues(
@@ -330,7 +481,7 @@ export default function BuildPCPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeBuild.selectedParts]);
+  }, [activeBuild.selectedParts, activeBuild.selectedVariants, activeBuild.selectedQuantities]);
 
   // ── Derived state ─────────────────────────────────────────────────────────
   const currentConfig = slotConfigs.find((s) => s.key === pickerCategory);
@@ -350,9 +501,13 @@ export default function BuildPCPage() {
           categoryLabel: config.label,
           icon: config.icon,
           part: part ? { ...part, compatibilityStatus } : null,
+          quantity: Math.min(
+            Math.max(1, activeBuild.selectedQuantities[config.key] ?? 1),
+            Math.max(1, config.maxQuantity),
+          ),
         };
       }),
-    [activeBuild.selectedParts, activeBuild.selectedVariants, errorVariantIds, slotConfigs]
+    [activeBuild.selectedParts, activeBuild.selectedVariants, activeBuild.selectedQuantities, errorVariantIds, slotConfigs]
   );
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -369,7 +524,7 @@ export default function BuildPCPage() {
     setBuilds((prev) =>
       prev.map((b) =>
         b.id === activeBuildId
-          ? { ...b, selectedParts: {}, selectedVariants: {} }
+          ? { ...b, selectedParts: {}, selectedVariants: {}, selectedQuantities: {} }
           : b
       )
     );
@@ -394,6 +549,13 @@ export default function BuildPCPage() {
               ...b,
               selectedParts: { ...b.selectedParts, [cat]: product },
               selectedVariants: { ...b.selectedVariants, [cat]: variantValue ?? "" },
+              // Default to qty 1 when newly selecting a part (preserve qty when replacing)
+              selectedQuantities: {
+                ...b.selectedQuantities,
+                [cat]: b.selectedQuantities[cat] && b.selectedParts[cat]
+                  ? b.selectedQuantities[cat]
+                  : 1,
+              },
             }
             : b
         )
@@ -411,12 +573,29 @@ export default function BuildPCPage() {
               ...b,
               selectedParts: { ...b.selectedParts, [category]: null },
               selectedVariants: { ...b.selectedVariants, [category]: "" },
+              selectedQuantities: { ...b.selectedQuantities, [category]: 1 },
             }
             : b
         )
       );
     },
     [activeBuildId]
+  );
+
+  const handleQuantityChange = useCallback(
+    (category: string, nextQuantity: number) => {
+      const config = slotConfigs.find((s) => s.key === category);
+      const max = Math.max(1, config?.maxQuantity ?? 1);
+      const clamped = Math.min(Math.max(1, Math.floor(nextQuantity)), max);
+      setBuilds((prev) =>
+        prev.map((b) =>
+          b.id === activeBuildId
+            ? { ...b, selectedQuantities: { ...b.selectedQuantities, [category]: clamped } }
+            : b
+        )
+      );
+    },
+    [activeBuildId, slotConfigs]
   );
 
   const handleAddToCart = useCallback(async () => {
@@ -442,6 +621,51 @@ export default function BuildPCPage() {
     alert("Đang xuất Excel...");
     setExportState("idle");
   }, []);
+
+  // ── Save build to account ─────────────────────────────────────────────────
+
+  const buildPayloadDetails = useMemo(() => {
+    return Object.entries(activeBuild.selectedParts)
+      .filter(([, p]) => p !== null && p !== undefined)
+      .map(([slot, p], idx) => {
+        const config = slotConfigs.find((s) => s.key === slot);
+        const variantId = resolveVariantId(p!, activeBuild.selectedVariants[slot]);
+        const qty = Math.max(1, activeBuild.selectedQuantities[slot] ?? 1);
+        const max = Math.max(1, config?.maxQuantity ?? 1);
+        const clamped = Math.min(qty, max);
+        return config && variantId
+          ? { slotId: config.slotId, phienBanId: variantId, soLuong: clamped, thuTu: idx }
+          : null;
+      })
+      .filter((x): x is { slotId: number; phienBanId: number; soLuong: number; thuTu: number } => x !== null);
+  }, [activeBuild.selectedParts, activeBuild.selectedVariants, activeBuild.selectedQuantities, slotConfigs]);
+
+  const openSaveModal = useCallback(async () => {
+    try {
+      const builds = await getMyBuilds();
+      setSavedBuildsCount(builds.length);
+    } catch {
+      setSavedBuildsCount(null);
+    }
+    setIsSaveModalOpen(true);
+  }, []);
+
+  const handleSaveBuild = useCallback(
+    async (values: { tenBuild: string; moTa: string; isPublic: boolean; trangThai: "draft" | "complete" }) => {
+      if (buildPayloadDetails.length === 0) {
+        throw new Error("Vui lòng chọn ít nhất 1 linh kiện trước khi lưu.");
+      }
+      await createMyBuild({
+        tenBuild: values.tenBuild,
+        moTa: values.moTa || undefined,
+        isPublic: values.isPublic,
+        trangThai: values.trangThai,
+        details: buildPayloadDetails,
+      });
+      setToast({ visible: true, type: "success", message: "Đã lưu cấu hình vào tài khoản của bạn." });
+    },
+    [buildPayloadDetails],
+  );
 
   // ── Helper ────────────────────────────────────────────────────────────────
 
@@ -486,16 +710,27 @@ export default function BuildPCPage() {
           >
             ← Trang chủ
           </Link>
-          <div className="flex items-center gap-3 mt-4">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
-              <WrenchScrewdriverIcon className="w-5 h-5" aria-hidden="true" />
-            </span>
-            <div>
-              <h1 className="text-3xl font-bold text-secondary-900">Build PC</h1>
-              <p className="mt-1 text-secondary-500">
-                Tự xây dựng cấu hình PC theo nhu cầu và ngân sách của bạn
-              </p>
+          <div className="flex items-center justify-between gap-4 mt-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
+                <WrenchScrewdriverIcon className="w-5 h-5" aria-hidden="true" />
+              </span>
+              <div>
+                <h1 className="text-3xl font-bold text-secondary-900">Build PC</h1>
+                <p className="mt-1 text-secondary-500">
+                  Tự xây dựng cấu hình PC theo nhu cầu và ngân sách của bạn
+                </p>
+              </div>
             </div>
+
+            {/* Link sang trang Cộng đồng Build PC */}
+            <Link
+              href="/community/builds"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-secondary-600 underline-offset-4 transition-colors hover:text-primary-600 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary-300"
+            >
+              <UserGroupIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>Xem cấu hình từ cộng đồng</span>
+            </Link>
           </div>
         </div>
       </header>
@@ -540,6 +775,28 @@ export default function BuildPCPage() {
             Đặt lại
           </button>
 
+          {/* Save build to account */}
+          <button
+            type="button"
+            onClick={openSaveModal}
+            disabled={buildPayloadDetails.length === 0}
+            className={[
+              "flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500",
+              buildPayloadDetails.length === 0
+                ? "cursor-not-allowed border-secondary-200 bg-secondary-50 text-secondary-400"
+                : "border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100",
+            ].join(" ")}
+            title={
+              buildPayloadDetails.length === 0
+                ? "Hãy chọn ít nhất 1 linh kiện để có thể lưu cấu hình"
+                : "Lưu cấu hình này vào tài khoản"
+            }
+          >
+            <BookmarkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+            Lưu cấu hình
+          </button>
+
           {/* Delete build (only when more than 1 build) */}
           {builds.length > 1 && (
             <button
@@ -573,6 +830,9 @@ export default function BuildPCPage() {
                 selectedPart={getPartInfo(config.key)}
                 onSelect={openPicker}
                 onRemove={handleRemove}
+                quantity={activeBuild.selectedQuantities[config.key] ?? 1}
+                maxQuantity={config.maxQuantity}
+                onQuantityChange={handleQuantityChange}
               />
             ))}
           </div>
@@ -642,6 +902,28 @@ export default function BuildPCPage() {
         selectedId={activeBuild.selectedParts[pickerCategory ?? ""]?.id}
         selectedVariantValue={pickerCategory ? activeBuild.selectedVariants[pickerCategory] : undefined}
         onSelect={handlePartSelect}
+      />
+
+      {/* ── Save build modal ────────────────────────────────────────────────── */}
+      <SaveBuildModal
+        isOpen={isSaveModalOpen}
+        onClose={() => setIsSaveModalOpen(false)}
+        defaultValues={{ tenBuild: activeBuild.name }}
+        partCount={buildPayloadDetails.length}
+        warning={
+          savedBuildsCount !== null && savedBuildsCount >= 5
+            ? "Bạn đã đạt giới hạn 5 cấu hình. Vui lòng xoá bớt tại trang Cấu hình PC trước khi lưu thêm."
+            : undefined
+        }
+        onSubmit={handleSaveBuild}
+      />
+
+      {/* ── Toast ────────────────────────────────────────────────────────────── */}
+      <ToastMessage
+        isVisible={toast.visible}
+        type={toast.type}
+        message={toast.message}
+        onClose={() => setToast((t) => ({ ...t, visible: false }))}
       />
     </div>
   );

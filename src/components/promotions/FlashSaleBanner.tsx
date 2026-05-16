@@ -4,10 +4,7 @@ import Image from "next/image";
 import { BoltIcon } from "@heroicons/react/24/solid";
 import { ProductCardList } from "@/src/components/product/ProductCardList";
 import { FlashSaleCountdown } from "./FlashSaleCountdown";
-import {
-  toProductCardProps,
-  type StorefrontProductCardDto,
-} from "@/src/types/storefront-product-card.types";
+import type { StorefrontProductCardDto } from "@/src/types/storefront-product-card.types";
 import type { StorefrontFlashSaleInfo } from "@/src/types/storefront-homepage-section.types";
 
 export interface FlashSaleBannerProps {
@@ -30,7 +27,6 @@ export interface FlashSaleBannerProps {
 export function FlashSaleBanner({ flashSale, products }: FlashSaleBannerProps) {
   if (products.length === 0) return null;
 
-  const cards = products.map((dto) => toProductCardProps(dto));
   const displayTitle = flashSale.bannerTitle?.trim() || flashSale.name;
   const altText =
     flashSale.bannerAlt?.trim() ||
@@ -88,7 +84,7 @@ export function FlashSaleBanner({ flashSale, products }: FlashSaleBannerProps) {
             <p className="mb-3 text-sm font-semibold text-secondary-900">
               Sản phẩm áp dụng
             </p>
-            <ProductCardList products={cards} itemsPerRow={6} gap="sm" />
+            <ProductCardList products={[]} dtos={products} itemsPerRow={6} gap="sm" />
           </div>
         </article>
       </div>

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { ReturnRequestPageInner } from "@/src/components/account/returns/ReturnRequestPageInner";
-import { MOCK_ORDERS } from "@/src/app/(storefront)/account/orders/_mock_data";
-import { RETURN_REQUESTS } from "@/src/app/(storefront)/account/returns/_mock_data";
+import { getOrderDetail } from "@/src/services/account-order.service";
+import { getMyReturns } from "@/src/services/account-return.service";
 import { getEligibleItems } from "@/src/lib/returns/eligibility";
 
 export const dynamic = "force-dynamic";
@@ -12,13 +12,21 @@ interface Props {
 
 export default async function ReturnRequestNewPage({ params }: Props) {
   const { orderId } = await params;
+  const numericId = Number(orderId);
+  if (!Number.isInteger(numericId)) notFound();
 
-  const order = MOCK_ORDERS.find((o) => o.id === orderId);
-  if (!order || order.status !== "delivered") notFound();
+  let order;
+  try {
+    order = await getOrderDetail(numericId);
+  } catch {
+    notFound();
+  }
+  if (order.status !== "delivered") notFound();
 
-  const existingRequests = RETURN_REQUESTS.filter(
-    (r) => r.orderId === orderId
-  );
+  const allReturns = await getMyReturns({ limit: 100 })
+    .then((r) => r.items)
+    .catch(() => []);
+  const existingRequests = allReturns.filter((r) => r.orderId === order.id);
 
   const eligibleItems = getEligibleItems(order.items, existingRequests);
 

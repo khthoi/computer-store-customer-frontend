@@ -10,7 +10,7 @@ import {
   ORDERS_PER_PAGE,
   type OrderSummary,
   type OrderStatus,
-} from "@/src/app/(storefront)/account/orders/_mock_data";
+} from "@/src/types/account-order.types";
 import { MagnifyingGlassIcon, ClipboardDocumentListIcon } from "@heroicons/react/24/outline";
 
 // ─── Tab config ───────────────────────────────────────────────────────────────

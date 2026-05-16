@@ -197,11 +197,13 @@ export function CartItem({
           {/* Product name — 3-line clamp + tooltip + new tab */}
           {productNameLink}
 
-          {/* Variant label */}
+          {/* Variant label — 1-line clamp with full-text tooltip on hover */}
           {item.variantLabel && (
-            <p className="mt-0.5 text-xs text-secondary-500">
-              {item.variantLabel}
-            </p>
+            <Tooltip content={item.variantLabel} placement="top" delay={300} anchorToContent>
+              <p className="mt-0.5 text-xs text-secondary-500 truncate max-w-full cursor-default">
+                {item.variantLabel}
+              </p>
+            </Tooltip>
           )}
 
           {/* OOS badge */}

@@ -19,6 +19,8 @@ import {
 import {
   cloneElement,
   isValidElement,
+  useCallback,
+  useEffect,
   useRef,
   useState,
   type ReactElement,
@@ -53,6 +55,17 @@ export interface TooltipProps {
   /** Disable the tooltip entirely */
   disabled?: boolean;
   /**
+   * Anchor the tooltip to the trigger's inline text content (its layout boxes)
+   * instead of the trigger element's full bounding box. Useful for
+   * `line-clamp`/`truncate` text inside a wide block container, where the
+   * default tooltip position would float over empty space next to the text.
+   *
+   * Implementation: measures the trigger's contents via a DOM `Range` and
+   * feeds the resulting rect to Floating UI's position reference.
+   * @default false
+   */
+  anchorToContent?: boolean;
+  /**
    * Trigger element. Must be a single React element so Floating UI can
    * attach its ref directly to the real DOM node (native HTML elements and
    * `forwardRef` components both work).
@@ -83,10 +96,12 @@ export function Tooltip({
   offsetPx = 8,
   delay = 50,
   disabled = false,
+  anchorToContent = false,
   children,
 }: TooltipProps) {
   const [open, setOpen] = useState(false);
   const arrowRef = useRef<HTMLDivElement>(null);
+  const triggerElRef = useRef<HTMLElement | null>(null);
 
   const {
     refs,
@@ -137,11 +152,47 @@ export function Tooltip({
     left: "right",
   }[resolvedPlacement.split("-")[0]] as "top" | "right" | "bottom" | "left";
 
+  // Combined ref that captures the real DOM node (used by anchorToContent's
+  // Range measurement) and forwards to Floating UI's reference setter.
+  const setTriggerRef = useCallback(
+    (el: HTMLElement | null) => {
+      triggerElRef.current = el;
+      refs.setReference(el);
+    },
+    [refs],
+  );
+
+  // When anchorToContent is true and the tooltip is open, override the
+  // position reference with a virtual element backed by a DOM Range over
+  // the trigger's contents. The getBoundingClientRect closure re-measures
+  // on every Floating UI tick so autoUpdate keeps the panel aligned.
+  useEffect(() => {
+    if (!anchorToContent || !open) return;
+    const el = triggerElRef.current;
+    if (!el) return;
+    refs.setPositionReference({
+      getBoundingClientRect: () => {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        return range.getBoundingClientRect();
+      },
+      getClientRects: () => {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        return range.getClientRects();
+      },
+    });
+    return () => {
+      // Revert to the trigger element so non-anchored opens use the default.
+      refs.setPositionReference(null);
+    };
+  }, [anchorToContent, open, refs]);
+
   // Inject ref + interaction props directly into the child element so
   // Floating UI measures the real DOM node — not a wrapper with zero size.
   const trigger = isValidElement(children)
     ? cloneElement(children as ReactElement<Record<string, unknown>>, {
-      ref: refs.setReference,
+      ref: setTriggerRef,
       ...getReferenceProps(),
     })
     : children;

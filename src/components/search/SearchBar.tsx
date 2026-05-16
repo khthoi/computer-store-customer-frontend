@@ -76,6 +76,11 @@ export function SearchBar({
     if (!trimmed) return;
     saveSearchHistory(trimmed);
     setIsFocused(false);
+    // Blur the input so a subsequent click re-fires onFocus and re-opens the
+    // popover. Without this, the DOM focus stays on the input after navigation,
+    // and clicking it again produces no `focus` event — the user would be
+    // stuck until they manually clear the field.
+    inputRef.current?.blur();
     onSearch?.(trimmed);
     router.push(`/search?q=${encodeURIComponent(trimmed)}`);
   }
@@ -133,6 +138,9 @@ export function SearchBar({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setIsFocused(true)}
+            // Safety net: re-open popover even if the input was already focused
+            // (e.g. after navigation kept DOM focus but isFocused was reset).
+            onClick={() => setIsFocused(true)}
             placeholder="Nhập tên sản phẩm, từ khoá cần tìm..."
             autoComplete="off"
             className={inputCls}
@@ -160,7 +168,13 @@ export function SearchBar({
         query={query}
         isFocused={isFocused}
         onSubmit={submit}
-        onClose={() => setIsFocused(false)}
+        onClose={() => {
+          setIsFocused(false);
+          // Drop DOM focus too so the next click on the input fires `focus`
+          // again. Without this the input stays focused after navigation /
+          // outside click and the popover never re-opens.
+          inputRef.current?.blur();
+        }}
         shortcutItems={shortcutItems}
         anchorRef={containerRef}
       />

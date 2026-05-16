@@ -10,10 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { ToastMessage } from "@/src/components/ui/Toast";
-import type {
-  CompareProduct,
-  ProductCategory,
-} from "@/src/components/compare-ui/types";
+import type { CompareProduct } from "@/src/components/compare-ui/types";
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
@@ -26,17 +23,38 @@ export interface CompareToast {
 
 interface CompareState {
   compareList: CompareProduct[];
-  activeCategory: ProductCategory | null;
+  /**
+   * Backend root categoryId — the only key used to enforce same-group compare.
+   * Display label lives on each product (`rootCategoryName`).
+   */
+  activeRootCategoryId: string | null;
+  /** Leaf categoryId of the first added product — used by drawer to scope queries. */
+  activeCategoryId: string | null;
   isDrawerOpen: boolean;
   toast: CompareToast | null;
 }
 
 const INITIAL_STATE: CompareState = {
   compareList: [],
-  activeCategory: null,
+  activeRootCategoryId: null,
+  activeCategoryId: null,
   isDrawerOpen: false,
   toast: null,
 };
+
+/**
+ * Two products belong to the same compare group when they share the same
+ * backend root categoryId. The root id comes from the category tree, so deep
+ * subcategory siblings (e.g. "VGA NVIDIA" vs "VGA AMD") still match.
+ */
+function sameCategory(a: CompareProduct, b: CompareProduct): boolean {
+  if (a.rootCategoryId && b.rootCategoryId) {
+    return a.rootCategoryId === b.rootCategoryId;
+  }
+  // Backward-compat: older localStorage entries (pre root-id refactor).
+  if (a.categoryId && b.categoryId) return a.categoryId === b.categoryId;
+  return a.category === b.category;
+}
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
@@ -48,9 +66,10 @@ type CompareAction =
   | { type: "OPEN_DRAWER" }
   | { type: "CLOSE_DRAWER" }
   | { type: "SET_TOAST"; payload: CompareToast | null }
+  | { type: "REPLACE_WITH"; payload: CompareProduct }
   | {
       type: "HYDRATE";
-      payload: Pick<CompareState, "compareList" | "activeCategory">;
+      payload: Pick<CompareState, "compareList" | "activeRootCategoryId" | "activeCategoryId">;
     };
 
 // ─── Reducer ──────────────────────────────────────────────────────────────────
@@ -62,14 +81,52 @@ function compareReducer(
   switch (action.type) {
     case "ADD_PRODUCT": {
       const p = action.payload;
-      if (state.compareList.some((x) => x.id === p.id)) return state;
-      if (state.compareList.length >= 4) return state;
-      if (state.activeCategory && p.category !== state.activeCategory)
-        return state;
+      if (state.compareList.some((x) => x.id === p.id)) {
+        return {
+          ...state,
+          toast: {
+            type: "error",
+            message: "Phiên bản này đã có trong danh sách so sánh.",
+          },
+        };
+      }
+      if (state.compareList.length >= 4) {
+        return {
+          ...state,
+          toast: {
+            type: "error",
+            message:
+              "Chỉ so sánh tối đa 4 sản phẩm. Hãy bỏ bớt sản phẩm trước khi thêm.",
+          },
+        };
+      }
+      const first = state.compareList[0];
+      if (first && !sameCategory(first, p)) {
+        return {
+          ...state,
+          toast: {
+            type: "error",
+            message:
+              "Chỉ so sánh các sản phẩm trong cùng một danh mục. Hãy xoá danh sách hiện tại để bắt đầu danh mục mới.",
+          },
+        };
+      }
       return {
         ...state,
         compareList: [...state.compareList, p],
-        activeCategory: state.activeCategory ?? p.category,
+        activeRootCategoryId: state.activeRootCategoryId ?? (p.rootCategoryId || null),
+        activeCategoryId: state.activeCategoryId ?? (p.categoryId || null),
+        toast: { type: "success", message: "Đã thêm vào so sánh." },
+      };
+    }
+    case "REPLACE_WITH": {
+      const p = action.payload;
+      return {
+        ...state,
+        compareList: [p],
+        activeRootCategoryId: p.rootCategoryId || null,
+        activeCategoryId: p.categoryId || null,
+        toast: { type: "success", message: "Đã thay danh mục so sánh." },
       };
     }
     case "UPDATE_PRODUCT": {
@@ -82,14 +139,16 @@ function compareReducer(
     }
     case "REMOVE_PRODUCT": {
       const next = state.compareList.filter((p) => p.id !== action.payload);
+      const empty = next.length === 0;
       return {
         ...state,
         compareList: next,
-        activeCategory: next.length === 0 ? null : state.activeCategory,
+        activeRootCategoryId: empty ? null : state.activeRootCategoryId,
+        activeCategoryId: empty ? null : state.activeCategoryId,
       };
     }
     case "CLEAR_ALL":
-      return { ...state, compareList: [], activeCategory: null };
+      return { ...state, compareList: [], activeRootCategoryId: null, activeCategoryId: null };
     case "OPEN_DRAWER":
       return { ...state, isDrawerOpen: true };
     case "CLOSE_DRAWER":
@@ -108,6 +167,8 @@ function compareReducer(
 export interface CompareContextValue {
   state: CompareState;
   addProduct: (product: CompareProduct) => void;
+  /** Replaces the current compare list with a single product (different category). */
+  replaceWith: (product: CompareProduct) => void;
   removeProduct: (id: string) => void;
   updateProduct: (product: CompareProduct) => void;
   clearAll: () => void;
@@ -156,17 +217,26 @@ export function CompareProvider({
     try {
       const raw = localStorage.getItem(LS_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) as Pick<
-          CompareState,
-          "compareList" | "activeCategory"
-        >;
+        const parsed = JSON.parse(raw) as {
+          compareList?: CompareProduct[];
+          activeRootCategoryId?: string | null;
+          activeCategoryId?: string | null;
+        };
         if (Array.isArray(parsed.compareList) && parsed.compareList.length > 0) {
           const enriched = parsed.compareList.map(
             (p) => catalogueMap.current.get(p.id) ?? p
           );
           dispatch({
             type: "HYDRATE",
-            payload: { ...parsed, compareList: enriched },
+            payload: {
+              compareList: enriched,
+              activeRootCategoryId:
+                parsed.activeRootCategoryId ??
+                enriched[0]?.rootCategoryId ??
+                null,
+              activeCategoryId:
+                parsed.activeCategoryId ?? enriched[0]?.categoryId ?? null,
+            },
           });
           return;
         }
@@ -180,7 +250,8 @@ export function CompareProvider({
         type: "HYDRATE",
         payload: {
           compareList: initialProducts,
-          activeCategory: initialProducts[0]?.category ?? null,
+          activeRootCategoryId: initialProducts[0]?.rootCategoryId ?? null,
+          activeCategoryId: initialProducts[0]?.categoryId ?? null,
         },
       });
     }
@@ -194,13 +265,14 @@ export function CompareProvider({
         LS_KEY,
         JSON.stringify({
           compareList: state.compareList,
-          activeCategory: state.activeCategory,
+          activeRootCategoryId: state.activeRootCategoryId,
+          activeCategoryId: state.activeCategoryId,
         })
       );
     } catch {
       // ignore storage errors
     }
-  }, [state.compareList, state.activeCategory]);
+  }, [state.compareList, state.activeRootCategoryId, state.activeCategoryId]);
 
   // ── Toast helper ──────────────────────────────────────────────────────────
 
@@ -256,11 +328,9 @@ export function CompareProvider({
         showToast("Tối đa 4 sản phẩm", "error");
         return;
       }
-      if (
-        state.activeCategory &&
-        fullProduct.category !== state.activeCategory
-      ) {
-        showToast("Chỉ có thể so sánh sản phẩm cùng loại", "error");
+      const first = state.compareList[0];
+      if (first && !sameCategory(first, fullProduct)) {
+        showToast(`Chỉ có thể so sánh sản phẩm cùng "${first.rootCategoryName || "danh mục"}"`, "error");
         return;
       }
       dispatch({ type: "ADD_PRODUCT", payload: fullProduct });
@@ -269,11 +339,15 @@ export function CompareProvider({
         "success"
       );
     },
-    [state.compareList, state.activeCategory, showToast]
+    [state.compareList, showToast]
   );
 
   const removeProduct = useCallback((id: string) => {
     dispatch({ type: "REMOVE_PRODUCT", payload: id });
+  }, []);
+
+  const replaceWith = useCallback((product: CompareProduct) => {
+    dispatch({ type: "REPLACE_WITH", payload: product });
   }, []);
 
   const updateProduct = useCallback((product: CompareProduct) => {
@@ -294,7 +368,7 @@ export function CompareProvider({
 
   return (
     <CompareContext.Provider
-      value={{ state, addProduct, removeProduct, updateProduct, clearAll, openDrawer, closeDrawer }}
+      value={{ state, addProduct, replaceWith, removeProduct, updateProduct, clearAll, openDrawer, closeDrawer }}
     >
       {children}
 

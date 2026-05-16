@@ -56,7 +56,12 @@ export interface ProductCardProps {
   variants?: VariantGroup[];
   /** Show the product as wishlisted */
   isWishlisted?: boolean;
-  onAddToCart?: (id: string, selectedVariants: Record<string, string>) => void;
+  /**
+   * Visual-only "already in compare" indicator. The compare button stays
+   * enabled so multi-variant products can have more variants added.
+   */
+  isInCompare?: boolean;
+  onAddToCart?: (id: string, selectedVariants: Record<string, string>, quantity?: number) => void;
   onCompare?: (id: string, selectedVariants: Record<string, string>) => void;
   onWishlistToggle?: (id: string, wishlisted: boolean, selectedVariants: Record<string, string>) => void;
   /**
@@ -136,12 +141,21 @@ export const ProductCard = memo(function ProductCard({
   stockQuantity,
   variants,
   isWishlisted = false,
+  isInCompare = false,
   onAddToCart,
   onCompare,
   onWishlistToggle,
   variant = "grid",
   className = "",
 }: ProductCardProps) {
+  // Returns the lone variant id when the product has exactly one purchasable
+  // variant; in that case all 3 actions skip the selector drawer and fire
+  // directly with that variant pre-selected.
+  const singleVariantId = (() => {
+    if (!variants || variants.length !== 1) return null;
+    const opts = variants[0]?.options ?? [];
+    return opts.length === 1 ? opts[0].value : null;
+  })();
   const [wishlisted, setWishlisted] = useState(isWishlisted);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerAction, setDrawerAction] = useState<DrawerActionType>("cart");
@@ -165,13 +179,31 @@ export const ProductCard = memo(function ProductCard({
   );
 
   const handleWishlistClick = useCallback(
-    (e: React.MouseEvent) => openDrawer(e, "wishlist"),
-    [openDrawer]
+    (e: React.MouseEvent) => {
+      if (singleVariantId) {
+        e.preventDefault();
+        e.stopPropagation();
+        const next = !wishlisted;
+        setWishlisted(next);
+        onWishlistToggle?.(id, next, { variantId: singleVariantId });
+        return;
+      }
+      openDrawer(e, "wishlist");
+    },
+    [openDrawer, singleVariantId, wishlisted, id, onWishlistToggle]
   );
 
   const handleCompareClick = useCallback(
-    (e: React.MouseEvent) => openDrawer(e, "compare"),
-    [openDrawer]
+    (e: React.MouseEvent) => {
+      if (singleVariantId) {
+        e.preventDefault();
+        e.stopPropagation();
+        onCompare?.(id, { variantId: singleVariantId });
+        return;
+      }
+      openDrawer(e, "compare");
+    },
+    [openDrawer, singleVariantId, id, onCompare]
   );
 
   const handleCartClick = useCallback(
@@ -185,9 +217,9 @@ export const ProductCard = memo(function ProductCard({
   // ── Drawer confirm — executes the actual action ─────────────────────────────
 
   const handleConfirm = useCallback(
-    (selectedVariants: Record<string, string>) => {
+    (selectedVariants: Record<string, string>, quantity: number) => {
       if (drawerAction === "cart") {
-        onAddToCart?.(id, selectedVariants);
+        onAddToCart?.(id, selectedVariants, quantity);
       } else if (drawerAction === "compare") {
         onCompare?.(id, selectedVariants);
       } else {
@@ -306,7 +338,11 @@ export const ProductCard = memo(function ProductCard({
           <div className="flex shrink-0 flex-col items-end justify-between">
             <StockBadge status={stockStatus} quantity={stockQuantity} size="sm" />
             <div className="flex gap-2">
-              <IconActionButton label="So sánh" onClick={handleCompareClick}>
+              <IconActionButton
+                label={isInCompare ? "Đã có trong so sánh" : "So sánh"}
+                onClick={handleCompareClick}
+                active={isInCompare}
+              >
                 <ArrowsRightLeftIcon className="h-4 w-4" aria-hidden="true" />
               </IconActionButton>
               {isOutOfStock && (
@@ -494,7 +530,11 @@ export const ProductCard = memo(function ProductCard({
 
           {/* ── 6. Action Buttons — pinned to card bottom via mt-auto ── */}
           <div className="mt-auto flex items-center justify-end gap-2 border-t border-secondary-100 pt-2">
-            <IconActionButton label="So sánh" onClick={handleCompareClick}>
+            <IconActionButton
+              label={isInCompare ? "Đã có trong so sánh" : "So sánh"}
+              onClick={handleCompareClick}
+              active={isInCompare}
+            >
               <ArrowsRightLeftIcon className="h-4 w-4" aria-hidden="true" />
             </IconActionButton>
 

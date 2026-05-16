@@ -5,6 +5,7 @@ import {
   useCallback,
   useId,
   useRef,
+  useState,
   type ChangeEvent,
   type TextareaHTMLAttributes,
 } from "react";
@@ -34,16 +35,20 @@ export interface TextareaProps
   autoResize?: boolean;
   /**
    * Shows a live "current / max" character counter below the textarea.
-   * Requires either `maxLength` or `maxCount` to be provided.
+   * Requires `maxCharCount`, `maxCount`, or `maxLength` to be provided.
    * @default false
    */
   showCharCount?: boolean;
   /**
-   * Maximum number shown in the character counter.
+   * Maximum number shown in the character counter when no hard limit is set.
    * Falls back to `maxLength` when omitted.
-   * Useful when you want a soft visual limit without enforcing maxLength.
    */
   maxCount?: number;
+  /**
+   * Hard character limit. Input that would exceed this count is blocked in onChange.
+   * Also used as the counter's maximum when `showCharCount` is true.
+   */
+  maxCharCount?: number;
 }
 
 // ─── Style maps ───────────────────────────────────────────────────────────────
@@ -109,6 +114,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
       autoResize = false,
       showCharCount = false,
       maxCount,
+      maxCharCount,
       id: idProp,
       onChange,
       value,
@@ -126,11 +132,17 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     const innerRef = useRef<HTMLTextAreaElement | null>(null);
     const hasError = Boolean(errorMessage);
 
-    // Resolve the display limit: prefer explicit maxCount, fall back to maxLength
-    const displayLimit = maxCount ?? maxLength;
+    // Priority for the counter's max: maxCharCount > maxCount > maxLength
+    const displayLimit = maxCharCount ?? maxCount ?? maxLength;
 
-    // For controlled inputs, derive current length from value prop
-    const currentLength = value !== undefined ? String(value).length : undefined;
+    // Track length for uncontrolled inputs (e.g. react-hook-form register)
+    const [uncontrolledLength, setUncontrolledLength] = useState<number>(() =>
+      typeof defaultValue === "string" ? defaultValue.length : 0
+    );
+
+    // Controlled: derive from value prop; uncontrolled: use tracked state
+    const currentLength =
+      value !== undefined ? String(value).length : uncontrolledLength;
 
     const describedBy = [
       hasError ? errorId : null,
@@ -139,17 +151,37 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
       .filter(Boolean)
       .join(" ") || undefined;
 
-    // ── Auto-resize handler ───────────────────────────────────────────────────
+    // ── Change handler — enforces hard char limit, drives auto-resize ─────────
     const handleChange = useCallback(
       (e: ChangeEvent<HTMLTextAreaElement>) => {
+        let newValue = e.target.value;
+
+        // Hard character-limit enforcement
+        if (maxCharCount !== undefined && newValue.length > maxCharCount) {
+          newValue = newValue.slice(0, maxCharCount);
+          if (innerRef.current) {
+            innerRef.current.value = newValue;
+          }
+          Object.defineProperty(e, "target", {
+            writable: false,
+            value: { ...e.target, value: newValue },
+          });
+        }
+
         if (autoResize && innerRef.current) {
           // Reset height first so scrollHeight shrinks correctly on deletion
           innerRef.current.style.height = "auto";
           innerRef.current.style.height = `${innerRef.current.scrollHeight}px`;
         }
+
+        // Keep uncontrolled length in sync
+        if (value === undefined) {
+          setUncontrolledLength(newValue.length);
+        }
+
         onChange?.(e);
       },
-      [autoResize, onChange]
+      [autoResize, maxCharCount, onChange, value]
     );
 
     // ── Merge forwarded ref + inner ref ───────────────────────────────────────
@@ -169,9 +201,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
 
     // ── Character counter color ───────────────────────────────────────────────
     const isAtLimit =
-      displayLimit !== undefined &&
-      currentLength !== undefined &&
-      currentLength >= displayLimit;
+      displayLimit !== undefined && currentLength >= displayLimit;
 
     const counterClass = isAtLimit
       ? "text-error-600 font-medium"
@@ -236,7 +266,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
               aria-atomic="true"
               className={`shrink-0 tabular-nums text-xs ${counterClass}`}
             >
-              {currentLength ?? 0}/{displayLimit}
+              {currentLength} / {displayLimit}
             </p>
           )}
         </div>
@@ -255,8 +285,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
  * errorMessage  string             —         Validation error; sets aria-invalid + red border
  * size          "sm"|"md"|"lg"     "md"      Height + text size variant
  * autoResize    boolean            false     Grows height to fit content; removes resize handle
- * showCharCount boolean            false     Shows "n / max" counter; needs maxLength or maxCount
- * maxCount      number             —         Display limit for counter (overrides maxLength display)
+ * showCharCount boolean            false     Shows "n / max" counter; needs maxCharCount, maxCount, or maxLength
+ * maxCharCount  number             —         Hard char limit enforced in onChange; also sets counter max
+ * maxCount      number             —         Display-only counter max (overrides maxLength display)
  * maxLength     number             —         Native max characters (enforced by browser)
  * id            string             auto      HTML id; auto-generated if omitted
  * disabled      boolean            false     Native disabled state

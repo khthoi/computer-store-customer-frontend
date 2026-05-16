@@ -7,14 +7,14 @@ import { Button } from "@/src/components/ui/Button";
 import { ReturnFileUpload } from "@/src/components/account/returns/ReturnFileUpload";
 import {
   RETURN_REASON_OPTIONS,
-} from "@/src/app/(storefront)/account/returns/_mock_data";
+} from "@/src/types/account-return.types";
 import type {
   ReturnReason,
   ResolutionMethod,
   FilePreview,
   Step2Errors,
   WizardState,
-} from "@/src/app/(storefront)/account/returns/_mock_data";
+} from "@/src/types/account-return.types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

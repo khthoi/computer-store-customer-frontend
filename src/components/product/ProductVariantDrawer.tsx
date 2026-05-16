@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useCallback } from "react";
+import { memo, useState, useCallback, useEffect } from "react";
 import { Drawer } from "@/src/components/ui/Drawer";
 import { VariantSelector } from "@/src/components/product/VariantSelector";
 import type { VariantOption } from "@/src/components/product/VariantSelector";
@@ -9,6 +9,8 @@ import {
   ShoppingCartIcon,
   ArrowsRightLeftIcon,
   HeartIcon,
+  MinusIcon,
+  PlusIcon,
 } from "@heroicons/react/24/outline";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -44,9 +46,10 @@ export interface ProductVariantDrawerProps {
   variants?: VariantGroup[];
   /**
    * Called when the user confirms the action.
-   * Receives a map of { [group.key]: selectedOptionValue }.
+   * Receives a map of { [group.key]: selectedOptionValue } and the chosen
+   * quantity (only meaningful when actionType === "cart"; 1 otherwise).
    */
-  onConfirm: (selectedVariants: Record<string, string>) => void;
+  onConfirm: (selectedVariants: Record<string, string>, quantity: number) => void;
 }
 
 // ─── Action config ────────────────────────────────────────────────────────────
@@ -102,26 +105,79 @@ export const ProductVariantDrawer = memo(function ProductVariantDrawer({
   variants = [],
   onConfirm,
 }: ProductVariantDrawerProps) {
-  const [selected, setSelected] = useState<Record<string, string>>({});
+  const computeDefaultSelection = useCallback(
+    (groups: VariantGroup[]): Record<string, string> => {
+      const next: Record<string, string> = {};
+      for (const group of groups) {
+        const def =
+          group.options.find((o) => o.isDefault) ?? group.options[0];
+        if (def) next[group.key] = def.value;
+      }
+      return next;
+    },
+    [],
+  );
+
+  const [selected, setSelected] = useState<Record<string, string>>(() =>
+    computeDefaultSelection(variants),
+  );
+  const [quantity, setQuantity] = useState(1);
+
+  // Re-seed default selection whenever the drawer is (re)opened or when the
+  // variant list itself changes. Without this, switching cards while the
+  // drawer is mounted would keep stale selection state.
+  useEffect(() => {
+    if (isOpen) {
+      setSelected(computeDefaultSelection(variants));
+      setQuantity(1);
+    }
+  }, [isOpen, variants, computeDefaultSelection]);
 
   const handleSelect = useCallback((key: string, value: string) => {
     setSelected((prev) => ({ ...prev, [key]: value }));
   }, []);
 
   const handleConfirm = useCallback(() => {
-    onConfirm(selected);
+    onConfirm(selected, actionType === "cart" ? quantity : 1);
     onClose();
-    // Reset selection for next open
-    setSelected({});
-  }, [onConfirm, selected, onClose]);
+    setSelected(computeDefaultSelection(variants));
+    setQuantity(1);
+  }, [onConfirm, selected, quantity, actionType, onClose, variants, computeDefaultSelection]);
 
   const handleClose = useCallback(() => {
-    setSelected({});
+    setSelected(computeDefaultSelection(variants));
+    setQuantity(1);
     onClose();
-  }, [onClose]);
+  }, [onClose, variants, computeDefaultSelection]);
 
   const { label: actionLabel, Icon: ActionIcon, buttonClass } =
     ACTION_CONFIG[actionType];
+
+  // ── Derive preview (price / originalPrice / thumbnail) from selected option ──
+  // Falls back to the product-level values when no variant is selected yet, or
+  // when the selected option carries no per-variant data.
+  const selectedOption = (() => {
+    for (const group of variants) {
+      const value = selected[group.key];
+      if (!value) continue;
+      const opt = group.options.find((o) => o.value === value);
+      if (opt) return opt;
+    }
+    return undefined;
+  })();
+
+  const displayPrice =
+    selectedOption?.price != null ? selectedOption.price : product.price;
+  const displayOriginalPrice = selectedOption
+    ? selectedOption.originalPrice != null &&
+      selectedOption.originalPrice > (selectedOption.price ?? 0)
+      ? selectedOption.originalPrice
+      : undefined
+    : product.originalPrice;
+  const displayThumbnail =
+    selectedOption?.thumbnailUrl && selectedOption.thumbnailUrl.length > 0
+      ? selectedOption.thumbnailUrl
+      : product.thumbnail;
 
   return (
     <Drawer
@@ -164,7 +220,7 @@ export const ProductVariantDrawer = memo(function ProductVariantDrawer({
       <div className="flex items-center gap-4 pb-4 border-b border-secondary-100">
         <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-secondary-100 bg-secondary-50 p-2">
           <img
-            src={product.thumbnail}
+            src={displayThumbnail}
             alt={product.name}
             className="h-full w-full object-contain"
           />
@@ -177,13 +233,69 @@ export const ProductVariantDrawer = memo(function ProductVariantDrawer({
             {product.name}
           </p>
           <PriceTag
-            currentPrice={product.price}
-            originalPrice={product.originalPrice}
+            currentPrice={displayPrice}
+            originalPrice={displayOriginalPrice}
             size="sm"
             className="mt-1"
           />
         </div>
       </div>
+
+      {/* ── Quantity stepper (cart only) ── */}
+      {actionType === "cart" && (() => {
+        const maxStock = typeof selectedOption?.stock === "number" && selectedOption.stock > 0
+          ? selectedOption.stock
+          : 99;
+        const canDecrease = quantity > 1;
+        const canIncrease = quantity < maxStock;
+        return (
+          <div className="mt-5 flex items-center justify-between gap-4 border-b border-secondary-100 pb-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-secondary-400">
+                Số lượng
+              </p>
+              {typeof selectedOption?.stock === "number" && (
+                <p className="mt-0.5 text-xs text-secondary-500">
+                  Tồn kho: {selectedOption.stock}
+                </p>
+              )}
+            </div>
+            <div className="inline-flex items-center gap-0 rounded-lg border border-secondary-200 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => canDecrease && setQuantity((q) => q - 1)}
+                disabled={!canDecrease}
+                aria-label="Giảm số lượng"
+                className="flex h-10 w-10 items-center justify-center text-secondary-700 hover:bg-secondary-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <MinusIcon className="h-4 w-4" aria-hidden="true" />
+              </button>
+              <input
+                type="number"
+                min={1}
+                max={maxStock}
+                value={quantity}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  if (!Number.isFinite(n)) return;
+                  setQuantity(Math.min(maxStock, Math.max(1, Math.floor(n))));
+                }}
+                className="w-12 h-10 text-center text-sm font-semibold text-secondary-900 border-x border-secondary-200 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                aria-label="Số lượng"
+              />
+              <button
+                type="button"
+                onClick={() => canIncrease && setQuantity((q) => q + 1)}
+                disabled={!canIncrease}
+                aria-label="Tăng số lượng"
+                className="flex h-10 w-10 items-center justify-center text-secondary-700 hover:bg-secondary-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <PlusIcon className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Variant selectors ── */}
       {variants.length > 0 ? (

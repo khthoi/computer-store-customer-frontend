@@ -6,7 +6,6 @@ export type {
   CompareSpecRow,
   CatalogueProduct,
 } from "./types";
-export { CATEGORY_LABELS } from "./types";
 
 // ─── Components ───────────────────────────────────────────────────────────────
 export { EmptyCompareState } from "./EmptyCompareState";

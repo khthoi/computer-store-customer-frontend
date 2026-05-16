@@ -37,6 +37,8 @@ export interface BuildSlot {
     price: number;
     compatibilityStatus?: CompatibilityStatus;
   } | null;
+  /** Quantity of `part` in this slot (defaults to 1). */
+  quantity?: number;
 }
 
 export interface PCBuildSummaryProps {
@@ -103,7 +105,7 @@ export function PCBuildSummary({
   className = "",
 }: PCBuildSummaryProps) {
   const selectedSlots = slots.filter((s) => s.part != null);
-  const totalCost     = selectedSlots.reduce((sum, s) => sum + (s.part?.price ?? 0), 0);
+  const totalCost     = selectedSlots.reduce((sum, s) => sum + (s.part?.price ?? 0) * (s.quantity ?? 1), 0);
   const selectedCount = selectedSlots.length;
   const totalSlots    = slots.length;
   const errorCount    = compatibilityIssues.filter((i) => i.severity === "error").length;

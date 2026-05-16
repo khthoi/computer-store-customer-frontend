@@ -2,7 +2,7 @@ import { Badge } from "@/src/components/ui/Badge";
 import type {
   PointTransaction,
   PointTransactionType,
-} from "@/src/app/(storefront)/account/points/_mock_data";
+} from "@/src/types/account-loyalty.types";
 import type { BadgeVariant } from "@/src/components/ui/Badge";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

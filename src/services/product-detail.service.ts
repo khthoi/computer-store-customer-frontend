@@ -33,12 +33,13 @@ import type {
   StockStatus,
 } from "@/src/components/product/types";
 import type { ProductCardProps } from "@/src/components/product/ProductCard";
+import type { VariantGroup as DrawerVariantGroup } from "@/src/components/product/ProductVariantDrawer";
+import { formatVND } from "@/src/lib/format";
 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 export async function getProductBySlug(slug: string): Promise<ProductDetail> {
   const backend = await apiFetch<BackendProductDetail>(`/products/${encodeURIComponent(slug)}`);
-  assertProductHasMedia(backend);
   return mapBackendDetailToProductDetail(backend);
 }
 
@@ -50,7 +51,6 @@ export interface ProductDetailWithMeta {
 
 export async function getProductBySlugWithMeta(slug: string): Promise<ProductDetailWithMeta> {
   const backend = await apiFetch<BackendProductDetail>(`/products/${encodeURIComponent(slug)}`);
-  assertProductHasMedia(backend);
   return {
     product: mapBackendDetailToProductDetail(backend),
     categoryId: backend.category?.id ?? null,
@@ -67,6 +67,7 @@ export async function getProductReviews(
   productId: string,
   page: number,
   limit: number,
+  filters: { rating?: number; hasImages?: boolean } = {},
 ): Promise<{
   items: Review[];
   total: number;
@@ -75,6 +76,10 @@ export async function getProductReviews(
   distribution: RatingDistribution;
 }> {
   const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (filters.rating && filters.rating >= 1 && filters.rating <= 5) {
+    qs.set("rating", String(filters.rating));
+  }
+  if (filters.hasImages) qs.set("hasImages", "true");
   const backend = await apiFetch<BackendReviewListResult>(
     `/products/${encodeURIComponent(productId)}/reviews?${qs.toString()}`,
   );
@@ -107,15 +112,6 @@ export async function getRelatedProducts(
     .slice(0, limit);
 }
 
-function assertProductHasMedia(p: BackendProductDetail): void {
-  const hasMedia = p.variants.some((v) => (v.images?.length ?? 0) > 0);
-  if (!hasMedia) {
-    const error = new Error("Không tìm thấy sản phẩm") as Error & { status: number };
-    error.status = 404;
-    throw error;
-  }
-}
-
 // ─── Mappers ────────────────────────────────────────────────────────────────
 
 function mapBackendDetailToProductDetail(p: BackendProductDetail): ProductDetail {
@@ -123,7 +119,13 @@ function mapBackendDetailToProductDetail(p: BackendProductDetail): ProductDetail
   const defaultVariant: BackendProductVariant =
     variantById.get(p.defaultVariantId) ?? p.variants[0];
 
-  const images: GalleryMedia[] = (defaultVariant?.images ?? []).map((img, idx) => ({
+  // Prefer default variant images; fall back to any variant that has images.
+  const imageSource =
+    defaultVariant?.images?.length
+      ? defaultVariant.images
+      : p.variants.find((v) => v.images?.length)?.images ?? [];
+
+  const images: GalleryMedia[] = imageSource.map((img, idx) => ({
     key: img.id || `img-${idx}`,
     src: img.url,
     alt: img.alt ?? p.name,
@@ -236,7 +238,7 @@ function mapBackendReview(r: BackendReview): Review {
     rating: r.rating,
     title: r.tieuDe ?? undefined,
     content: r.noiDung ?? "",
-    images: [],
+    images: Array.isArray(r.hinhAnh) ? r.hinhAnh.filter((u) => typeof u === "string" && u.length > 0) : [],
     purchasedVariant: r.tenPhienBan ?? undefined,
     helpfulCount: r.helpfulCount ?? 0,
     createdAt: r.createdAt,
@@ -264,6 +266,26 @@ function mapBackendListItemToCard(p: BackendProductListItem): ProductCardProps {
     defaultVariant?.thumbnailUrl ??
     p.variants.find((v) => v.thumbnailUrl)?.thumbnailUrl ??
     "";
+  const variantGroups: DrawerVariantGroup[] =
+    p.variants.length > 0
+      ? [
+          {
+            key: "variantId",
+            label: "Phiên bản",
+            type: "button",
+            options: p.variants.map((v) => ({
+              value: v.id,
+              label: v.name,
+              stock: v.stock,
+              priceDelta: formatVND(Number(v.price)),
+              price: Number(v.price),
+              originalPrice: Number(v.originalPrice),
+              thumbnailUrl: v.thumbnailUrl ?? null,
+              isDefault: v.isDefault,
+            })),
+          },
+        ]
+      : [];
   return {
     id: p.id,
     name: p.name,
@@ -276,6 +298,7 @@ function mapBackendListItemToCard(p: BackendProductListItem): ProductCardProps {
     stockStatus: deriveStockStatus(p.totalStock),
     stockQuantity: p.totalStock,
     productCode: defaultVariant?.sku,
+    variants: variantGroups,
   };
 }
 

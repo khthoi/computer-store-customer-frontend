@@ -1,5 +1,5 @@
 import { StarIcon } from "@heroicons/react/24/solid";
-import type { MemberTier } from "@/src/app/(storefront)/account/points/_mock_data";
+import type { MemberTier } from "@/src/types/account-loyalty.types";
 
 interface PointsBadgeProps {
   tier: MemberTier;

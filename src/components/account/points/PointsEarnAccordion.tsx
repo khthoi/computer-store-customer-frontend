@@ -1,89 +1,160 @@
 import {
   ShoppingBagIcon,
-  StarIcon,
   GiftIcon,
-  ArrowPathRoundedSquareIcon,
-  UserGroupIcon,
+  CakeIcon,
+  SparklesIcon,
 } from "@heroicons/react/24/outline";
 import { Accordion } from "@/src/components/ui/Accordion";
 import type { AccordionItemDef } from "@/src/components/ui/Accordion";
+import type { EarnRule } from "@/src/types/account-loyalty.types";
 
-// ─── How-to-earn content ──────────────────────────────────────────────────────
+interface Props {
+  rules: EarnRule[];
+}
 
-const EARN_ITEMS: AccordionItemDef[] = [
-  {
-    value: "purchase",
-    label: "Mua hàng tích điểm",
-    icon: <ShoppingBagIcon />,
-    children: (
-      <ul className="space-y-1.5 list-disc list-inside text-secondary-600">
-        <li>Tích <strong>1 điểm</strong> cho mỗi <strong>10.000 VNĐ</strong> thanh toán.</li>
-        <li>Điểm được cộng sau khi đơn hàng chuyển sang trạng thái <em>Đã giao</em>.</li>
-        <li>Không áp dụng cho sản phẩm đã giảm giá hơn 50%.</li>
-      </ul>
-    ),
-  },
-  {
-    value: "review",
-    label: "Viết đánh giá sản phẩm",
-    icon: <StarIcon />,
-    children: (
-      <ul className="space-y-1.5 list-disc list-inside text-secondary-600">
-        <li>Đánh giá có nội dung (≥ 30 chữ): <strong>+50 điểm</strong>.</li>
-        <li>Kèm hình ảnh hoặc video: <strong>+100 điểm</strong>.</li>
-        <li>Giới hạn 1 lần / sản phẩm.</li>
-      </ul>
-    ),
-  },
-  {
-    value: "birthday",
-    label: "Thưởng sinh nhật",
-    icon: <GiftIcon />,
-    children: (
-      <p className="text-secondary-600">
-        Nhận <strong>500 điểm</strong> vào ngày sinh nhật của bạn (cần điền ngày sinh trong hồ sơ).
-        Điểm sẽ được cộng tự động lúc 00:00 ngày sinh nhật.
+function formatVND(amount: number): string {
+  return amount.toLocaleString("vi-VN") + "₫";
+}
+
+function formatPoints(points: number): string {
+  return points.toLocaleString("vi-VN") + " điểm";
+}
+
+function isSpendingRule(r: EarnRule): boolean {
+  return r.bonusTrigger === null && r.spendPerUnit > 0 && r.pointsPerUnit > 0;
+}
+
+function getRuleIcon(r: EarnRule) {
+  if (r.bonusTrigger === "birthday") return <CakeIcon />;
+  if (r.bonusTrigger === "first_order") return <SparklesIcon />;
+  if (r.bonusTrigger === "manual") return <GiftIcon />;
+  return <ShoppingBagIcon />;
+}
+
+function SpendingRuleBody({ r }: { r: EarnRule }) {
+  // Compute a friendly example: pick an order value that's a round multiple
+  // of spendPerUnit, at least 5x. Respect minOrderValue if higher.
+  const baseUnit = r.spendPerUnit;
+  const minOrder = r.minOrderValue ?? 0;
+  const exampleOrder = Math.max(baseUnit * 5, minOrder, 500_000);
+  let exampleEarned = Math.floor(exampleOrder / baseUnit) * r.pointsPerUnit;
+  if (r.maxPointsPerOrder != null && exampleEarned > r.maxPointsPerOrder) {
+    exampleEarned = r.maxPointsPerOrder;
+  }
+
+  return (
+    <div className="space-y-2 text-secondary-600">
+      <p>
+        Tích <strong>{formatPoints(r.pointsPerUnit)}</strong> cho mỗi{" "}
+        <strong>{formatVND(r.spendPerUnit)}</strong> chi tiêu.
       </p>
-    ),
-  },
-  {
-    value: "referral",
-    label: "Giới thiệu bạn bè",
-    icon: <UserGroupIcon />,
-    children: (
-      <ul className="space-y-1.5 list-disc list-inside text-secondary-600">
-        <li>Bạn nhận <strong>200 điểm</strong> khi người được giới thiệu đặt đơn hàng đầu tiên.</li>
-        <li>Người được giới thiệu nhận <strong>100 điểm</strong> sau khi đơn giao thành công.</li>
-        <li>Không giới hạn số lần giới thiệu.</li>
-      </ul>
-    ),
-  },
-  {
-    value: "redeem",
-    label: "Đổi điểm lấy ưu đãi",
-    icon: <ArrowPathRoundedSquareIcon />,
-    children: (
-      <ul className="space-y-1.5 list-disc list-inside text-secondary-600">
-        <li><strong>100 điểm</strong> = giảm <strong>10.000 VNĐ</strong> cho đơn hàng tiếp theo.</li>
-        <li>Tối đa đổi 500 điểm / đơn hàng.</li>
-        <li>Điểm hết hạn sau <strong>12 tháng</strong> kể từ ngày tích.</li>
-      </ul>
-    ),
-  },
-];
+      {r.description && (
+        <p className="text-xs text-secondary-500">{r.description}</p>
+      )}
 
-// ─── Component ────────────────────────────────────────────────────────────────
+      <ul className="space-y-1 text-xs text-secondary-500">
+        {r.minOrderValue != null && r.minOrderValue > 0 && (
+          <li>
+            • Áp dụng cho đơn hàng từ{" "}
+            <strong>{formatVND(r.minOrderValue)}</strong> trở lên.
+          </li>
+        )}
+        {r.maxPointsPerOrder != null && (
+          <li>
+            • Tích tối đa <strong>{formatPoints(r.maxPointsPerOrder)}</strong>{" "}
+            cho mỗi đơn.
+          </li>
+        )}
+        <li>
+          • Điểm được cộng sau khi đơn chuyển sang trạng thái{" "}
+          <em>Đã giao</em>.
+        </li>
+      </ul>
 
-/**
- * PointsEarnAccordion — collapsible FAQ about how to earn and use points.
- */
-export function PointsEarnAccordion() {
+      <div className="mt-2 rounded-lg bg-primary-50 px-3 py-2 text-xs text-primary-800">
+        <p className="font-semibold">Ví dụ:</p>
+        <p>
+          Đơn hàng <strong>{formatVND(exampleOrder)}</strong> → bạn nhận{" "}
+          <strong>{formatPoints(exampleEarned)}</strong>.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function BonusRuleBody({ r }: { r: EarnRule }) {
+  const bonusPoints = r.bonusPoints ?? 0;
+  let triggerText: string;
+  let example: string;
+  switch (r.bonusTrigger) {
+    case "first_order":
+      triggerText = "Thưởng khi bạn hoàn tất đơn hàng đầu tiên.";
+      example = `Hoàn tất đơn hàng đầu tiên → nhận ngay ${formatPoints(bonusPoints)}.`;
+      break;
+    case "birthday":
+      triggerText =
+        "Thưởng vào đúng ngày sinh nhật của bạn (cần điền ngày sinh trong hồ sơ).";
+      example = `Đến sinh nhật → tự động cộng ${formatPoints(bonusPoints)} lúc 00:00.`;
+      break;
+    case "manual":
+      triggerText =
+        "Điểm thưởng do nhân viên CSKH cấp thủ công (chương trình tri ân, đền bù, v.v.).";
+      example = `Khi được duyệt → bạn nhận ${formatPoints(bonusPoints)}.`;
+      break;
+    default:
+      triggerText = r.description || "Phần thưởng đặc biệt.";
+      example = bonusPoints > 0 ? `Bạn nhận ${formatPoints(bonusPoints)}.` : "";
+  }
+
+  return (
+    <div className="space-y-2 text-secondary-600">
+      <p>
+        <strong>Thưởng {formatPoints(bonusPoints)}</strong> · {triggerText}
+      </p>
+      {r.description && r.description !== triggerText && (
+        <p className="text-xs text-secondary-500">{r.description}</p>
+      )}
+      {example && (
+        <div className="mt-2 rounded-lg bg-primary-50 px-3 py-2 text-xs text-primary-800">
+          <p className="font-semibold">Ví dụ:</p>
+          <p>{example}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function PointsEarnAccordion({ rules }: Props) {
+  if (rules.length === 0) {
+    return (
+      <div>
+        <h2 className="mb-3 text-base font-semibold text-secondary-900">
+          Cách tích điểm
+        </h2>
+        <p className="text-sm text-secondary-400">
+          Hệ thống chưa cấu hình quy tắc tích điểm nào đang hoạt động.
+        </p>
+      </div>
+    );
+  }
+
+  const items: AccordionItemDef[] = rules.map((r) => ({
+    value: r.id,
+    label: r.name,
+    icon: getRuleIcon(r),
+    children: isSpendingRule(r) ? (
+      <SpendingRuleBody r={r} />
+    ) : (
+      <BonusRuleBody r={r} />
+    ),
+  }));
+
   return (
     <div>
       <h2 className="mb-3 text-base font-semibold text-secondary-900">
-        Cách tích &amp; đổi điểm
+        Cách tích điểm
       </h2>
-      <Accordion items={EARN_ITEMS} variant="separated" multiple />
+      <Accordion items={items} variant="separated" multiple />
     </div>
   );
 }

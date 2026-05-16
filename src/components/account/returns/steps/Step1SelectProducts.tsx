@@ -7,11 +7,11 @@ import { Button } from "@/src/components/ui/Button";
 import type {
   ReturnRequestItem,
   Step1Errors,
-} from "@/src/app/(storefront)/account/returns/_mock_data";
+} from "@/src/types/account-return.types";
 import type {
-  OrderSummary,
-  OrderItem,
-} from "@/src/app/(storefront)/account/orders/_mock_data";
+  OrderDetail,
+  OrderDetailItem,
+} from "@/src/types/account-order.types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -26,9 +26,9 @@ function formatDate(iso: string): string {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Step1Props {
-  order: OrderSummary;
+  order: OrderDetail;
   /** Pre-filtered: only the items the user is still eligible to return */
-  eligibleItems: OrderItem[];
+  eligibleItems: OrderDetailItem[];
   selectedItems: ReturnRequestItem[];
   onChange: (selectedItems: ReturnRequestItem[]) => void;
   onNext: () => void;

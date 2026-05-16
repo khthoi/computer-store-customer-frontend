@@ -38,11 +38,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
     defaultVariantId
       ? getVariantSpecs(defaultVariantId).catch(() => [])
       : Promise.resolve([]),
-    getProductReviews(product.id, 1, 10).catch(() => ({
+    getProductReviews(product.id, 1, 5).catch(() => ({
       items: [],
       total: 0,
       page: 1,
-      limit: 10,
+      limit: 5,
       distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
     })),
     categoryId
@@ -60,8 +60,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   return (
     <main className="min-h-screen bg-secondary-50 pb-24 lg:pb-0 max-w-[1430px] mx-auto flex flex-col">
-      <ProductHeroSection product={productDetail} />
-      <ProductTabsSection product={productDetail} />
+      <ProductHeroSection product={productDetail} totalReviews={reviewsResult.total} />
+      <ProductTabsSection product={productDetail} totalReviews={reviewsResult.total} />
       <RelatedProductsSection products={productDetail.relatedProducts} />
       <RecentlyViewedSection products={[]} />
     </main>

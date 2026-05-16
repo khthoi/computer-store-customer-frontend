@@ -648,12 +648,10 @@ export function CategoryCatalogClient({
             <EmptyState onClear={handleClearFilters} />
           ) : (
             <ProductCardList
-              products={result.items.map((p) => ({
-                ...toProductCardProps(p),
-              }))}
+              dtos={result.items}
+              products={[]}
               viewMode={viewMode}
               itemsPerRow={ITEMS_PER_ROW}
-              onCompare={handleCompare}
             />
           )}
 

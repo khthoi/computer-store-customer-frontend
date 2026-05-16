@@ -9,26 +9,25 @@ import { CompareProductDrawer } from "@/src/components/compare-ui/CompareProduct
 import { CompareDataBridge } from "@/src/components/compare-ui/CompareDataBridge";
 import { EmptyCompareState } from "@/src/components/compare-ui/EmptyCompareState";
 import { useCompare } from "@/src/store/compare.store";
-import {
-  CATEGORY_LABELS,
-  type CatalogueProduct,
-} from "@/src/components/compare-ui/types";
+import type { CatalogueProduct } from "@/src/components/compare-ui/types";
+import type { StorefrontProductCardDto } from "@/src/types/storefront-product-card.types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ComparePageClientProps {
   catalogue: CatalogueProduct[];
-  suggestedProducts: CatalogueProduct[];
+  popularProducts: StorefrontProductCardDto[];
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ComparePageClient({
   catalogue,
-  suggestedProducts,
+  popularProducts,
 }: ComparePageClientProps) {
   const { state } = useCompare();
-  const { compareList, activeCategory } = state;
+  const { compareList } = state;
+  const activeCategoryLabel = compareList[0]?.rootCategoryName ?? null;
   const tableRef = useRef<HTMLDivElement>(null);
   const hasEnough = compareList.length >= 2;
 
@@ -52,9 +51,9 @@ export function ComparePageClient({
             </p>
           </div>
 
-          {activeCategory && (
+          {activeCategoryLabel && (
             <Badge variant="primary" size="md" dot>
-              {CATEGORY_LABELS[activeCategory]}
+              {activeCategoryLabel}
             </Badge>
           )}
         </div>
@@ -69,16 +68,13 @@ export function ComparePageClient({
               <CompareTable />
             </div>
           ) : (
-            <EmptyCompareState suggestedProducts={suggestedProducts} />
+            <EmptyCompareState popularProducts={popularProducts} />
           )}
         </div>
       </main>
 
       {/* ── Product selection drawer (always mounted) ── */}
-      <CompareProductDrawer
-        catalogue={catalogue}
-        tableRef={tableRef}
-      />
+      <CompareProductDrawer tableRef={tableRef} />
     </div>
   );
 }

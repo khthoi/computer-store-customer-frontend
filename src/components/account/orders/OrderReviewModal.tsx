@@ -8,10 +8,11 @@ import {
   type ProductReviewCardHandle,
   type ProductReviewFormData,
 } from "@/src/components/account/orders/ProductReviewCard";
+import { submitProductReview } from "@/src/services/account-review.service";
 import type {
   OrderDetail,
   OrderDetailItem,
-} from "@/src/app/(storefront)/account/orders/[orderId]/_mock_data";
+} from "@/src/types/account-order.types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,8 @@ export interface OrderReviewModalProps {
   onClose: () => void;
   order: OrderDetail;
   onAllSubmitted?: () => void;
+  /** Called when a per-item submission fails — parent shows the toast. */
+  onSubmitError?: (message: string) => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -39,6 +42,7 @@ export function OrderReviewModal({
   onClose,
   order,
   onAllSubmitted,
+  onSubmitError,
 }: OrderReviewModalProps) {
   const [localItems, setLocalItems] = useState<OrderDetailItem[]>(order.items);
   const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
@@ -75,29 +79,40 @@ export function OrderReviewModal({
 
   const handleItemSubmit = useCallback(
     async (itemId: string, data: ProductReviewFormData) => {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const target = order.items.find((i) => i.id === itemId);
+      if (!target) return;
+      const variantIdNum = Number(target.variantId);
+      if (!Number.isFinite(variantIdNum) || variantIdNum <= 0) {
+        onSubmitError?.("Không xác định được phiên bản sản phẩm.");
+        throw new Error("invalid variantId");
+      }
 
-      setLocalItems((prev) =>
-        prev.map((item) =>
-          item.id === itemId
-            ? {
-                ...item,
-                review: {
-                  itemId,
-                  rating: data.rating,
-                  title: data.title || undefined,
-                  comment: data.content,
-                  reviewedAt: new Date().toISOString(),
-                  status: "pending" as const,
-                },
-              }
-            : item
-        )
-      );
-      setSubmittedCount((c) => c + 1);
+      try {
+        const review = await submitProductReview({
+          itemId,
+          orderId: order.numericId,
+          variantId: variantIdNum,
+          rating: data.rating,
+          title: data.title || undefined,
+          content: data.content,
+          images: data.files,
+        });
+
+        setLocalItems((prev) =>
+          prev.map((item) => (item.id === itemId ? { ...item, review } : item)),
+        );
+        setSubmittedCount((c) => c + 1);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Gửi đánh giá thất bại.";
+        onSubmitError?.(message);
+        // Re-throw so ProductReviewCard's bulk-submit loop can decide whether
+        // to keep iterating; the card's own isSubmitting state is reset in its
+        // finally block regardless.
+        throw err;
+      }
     },
-    []
+    [order.items, order.numericId, onSubmitError],
   );
 
   // ── Bulk submit ────────────────────────────────────────────────────────────

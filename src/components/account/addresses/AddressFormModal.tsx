@@ -5,7 +5,7 @@ import { Modal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";
 import { Input } from "@/src/components/ui/Input";
 import { Checkbox } from "@/src/components/ui/Checkbox";
-import type { Address } from "@/src/app/(storefront)/account/addresses/_mock_data";
+import type { Address } from "@/src/types/account-address.types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -116,7 +116,7 @@ export function AddressFormModal({
       isOpen={isOpen}
       onClose={onClose}
       title={isEdit ? "Chỉnh sửa địa chỉ" : "Thêm địa chỉ mới"}
-      size="lg"
+      size="2xl"
       animated
       footer={
         <>
