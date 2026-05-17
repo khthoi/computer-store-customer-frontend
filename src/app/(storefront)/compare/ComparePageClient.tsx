@@ -2,12 +2,12 @@
 
 import { useRef } from "react";
 import { Badge } from "@/src/components/ui/Badge";
-import { CompareBar } from "@/src/components/compare-ui/CompareBar";
-import { CompareHeaderCardList } from "@/src/components/compare-ui/CompareHeaderCardList";
-import { CompareTable } from "@/src/components/compare-ui/CompareTable";
-import { CompareProductDrawer } from "@/src/components/compare-ui/CompareProductDrawer";
-import { CompareDataBridge } from "@/src/components/compare-ui/CompareDataBridge";
-import { EmptyCompareState } from "@/src/components/compare-ui/EmptyCompareState";
+import { CompareBar } from "@/src/components/compare-ui/header/CompareBar";
+import { CompareHeaderCardList } from "@/src/components/compare-ui/header/CompareHeaderCardList";
+import { CompareTable } from "@/src/components/compare-ui/table/CompareTable";
+import { CompareProductDrawer } from "@/src/components/compare-ui/drawer/CompareProductDrawer";
+import { CompareDataBridge } from "@/src/components/compare-ui/state/CompareDataBridge";
+import { EmptyCompareState } from "@/src/components/compare-ui/state/EmptyCompareState";
 import { useCompare } from "@/src/store/compare.store";
 import type { CatalogueProduct } from "@/src/components/compare-ui/types";
 import type { StorefrontProductCardDto } from "@/src/types/storefront-product-card.types";

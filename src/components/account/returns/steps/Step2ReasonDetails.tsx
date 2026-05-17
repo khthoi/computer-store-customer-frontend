@@ -51,7 +51,7 @@ export function Step2ReasonDetails({
       <Select
         label="Lý do trả hàng"
         placeholder="-- Chọn lý do --"
-        options={RETURN_REASON_OPTIONS}
+        options={[...RETURN_REASON_OPTIONS]}
         value={reason || undefined}
         onChange={(val) => onChange({ reason: val as ReturnReason })}
         errorMessage={errors.reason}

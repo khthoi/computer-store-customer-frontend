@@ -3,12 +3,12 @@
  * These supplement the component-level props types with page-level data shapes.
  */
 
-import type { GalleryMedia } from "./ProductImageGallery";
-import type { StockStatus } from "./StockBadge";
-import type { SpecRow } from "./SpecTable";
-import type { Review } from "./ReviewCard";
-import type { RatingDistribution } from "./ReviewSection";
-import type { ProductCardProps } from "./ProductCard";
+import type { GalleryMedia } from "./hero/ProductImageGallery";
+import type { StockStatus } from "./atoms/StockBadge";
+import type { SpecRow } from "./tabs/SpecTable";
+import type { Review } from "./reviews/ReviewCard";
+import type { RatingDistribution } from "./reviews/ReviewSection";
+import type { ProductCardProps } from "./card/ProductCard";
 
 // Re-export for convenience
 export type { GalleryMedia, StockStatus, SpecRow, Review, RatingDistribution };

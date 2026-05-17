@@ -7,7 +7,7 @@ import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { Badge } from "@/src/components/ui/Badge";
 import { Select } from "@/src/components/ui/Select";
 import { Tooltip } from "@/src/components/ui/Tooltip";
-import { PriceTag } from "@/src/components/product/PriceTag";
+import { PriceTag } from "@/src/components/product/atoms/PriceTag";
 import type { CompatibilityStatus } from "@/src/components/buildpc/PCPartCard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────

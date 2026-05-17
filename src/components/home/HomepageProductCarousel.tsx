@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ProductCarousel } from "@/src/components/product/ProductCarousel";
+import { ProductCarousel } from "@/src/components/product/card/ProductCarousel";
 import type { StorefrontProductCardDto } from "@/src/types/storefront-product-card.types";
 
 interface HomepageProductCarouselProps {

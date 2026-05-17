@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getRedemptionCatalog } from "@/src/services/loyalty.service";
-import { RewardCatalog } from "@/src/components/promotions/RewardCatalog";
+import { RewardCatalog } from "@/src/components/promotions/loyalty/RewardCatalog";
 
 export const dynamic = "force-dynamic";
 

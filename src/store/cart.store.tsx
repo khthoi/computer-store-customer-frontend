@@ -10,7 +10,7 @@ import {
 } from "react";
 import { ToastMessage } from "@/src/components/ui/Toast";
 import { formatVND } from "@/src/lib/format";
-import type { StockStatus } from "@/src/components/product/StockBadge";
+import type { StockStatus } from "@/src/components/product/atoms/StockBadge";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

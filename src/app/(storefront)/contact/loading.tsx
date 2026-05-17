@@ -17,7 +17,7 @@ export default function ContactLoading() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="bg-white rounded-xl border border-slate-200 p-5 flex flex-col items-center gap-2">
-              <Skeleton variant="rectangular" className="h-8 w-8 rounded" />
+              <Skeleton variant="rect" className="h-8 w-8 rounded" />
               <Skeleton variant="text" className="h-4 w-20" />
               <Skeleton variant="text" className="h-3 w-28" />
             </div>
@@ -29,10 +29,10 @@ export default function ContactLoading() {
           <div className="lg:col-span-3 bg-white rounded-xl border border-slate-200 p-8 space-y-5">
             <Skeleton variant="text" className="h-6 w-40 mb-4" />
             {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} variant="rectangular" className="h-12 w-full rounded-lg" />
+              <Skeleton key={i} variant="rect" className="h-12 w-full rounded-lg" />
             ))}
-            <Skeleton variant="rectangular" className="h-32 w-full rounded-lg" />
-            <Skeleton variant="rectangular" className="h-12 w-full rounded-lg" />
+            <Skeleton variant="rect" className="h-32 w-full rounded-lg" />
+            <Skeleton variant="rect" className="h-12 w-full rounded-lg" />
           </div>
           <div className="lg:col-span-2 space-y-4">
             <Skeleton variant="text" className="h-6 w-48 mb-2" />

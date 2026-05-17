@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { OrderDetailPageInner } from "@/src/components/account/orders/OrderDetailPageInner";
+import { OrderDetailPageInner } from "@/src/components/account/orders/page/OrderDetailPageInner";
 import { getOrderDetail } from "@/src/services/account-order.service";
 
 export const dynamic = "force-dynamic";

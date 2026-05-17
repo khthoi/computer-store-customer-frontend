@@ -3,8 +3,8 @@ import {
   getEarnRules,
   getMembershipTiers,
 } from "@/src/services/loyalty.service";
-import { LoyaltyTiersTable } from "@/src/components/promotions/LoyaltyTiersTable";
-import { EarnRulesList } from "@/src/components/promotions/EarnRulesList";
+import { LoyaltyTiersTable } from "@/src/components/promotions/loyalty/LoyaltyTiersTable";
+import { EarnRulesList } from "@/src/components/promotions/loyalty/EarnRulesList";
 
 export const dynamic = "force-dynamic";
 

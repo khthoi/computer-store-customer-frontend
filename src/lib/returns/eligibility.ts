@@ -1,4 +1,4 @@
-import type { OrderSummary, OrderItem } from "@/src/types/account-order.types";
+import type { OrderSummary } from "@/src/types/account-order.types";
 import type { ReturnRequest } from "@/src/types/account-return.types";
 
 /**
@@ -8,10 +8,10 @@ import type { ReturnRequest } from "@/src/types/account-return.types";
  * whose status is NOT "rejected" (i.e. submitted | processing | approved).
  * A rejected request releases the item so the user may retry.
  */
-export function getEligibleItems(
-  orderItems: OrderItem[],
+export function getEligibleItems<T extends { id: string }>(
+  orderItems: T[],
   existingRequests: ReturnRequest[]
-): OrderItem[] {
+): T[] {
   const coveredItemIds = new Set<string>();
 
   for (const req of existingRequests) {

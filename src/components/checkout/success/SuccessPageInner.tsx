@@ -4,7 +4,7 @@ import Link from "next/link";
 import { EnvelopeIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/src/components/ui/Button";
 import { Alert } from "@/src/components/ui/Alert";
-import { ProductCarousel } from "@/src/components/product/ProductCarousel";
+import { ProductCarousel } from "@/src/components/product/card/ProductCarousel";
 import { SuccessHero } from "./SuccessHero";
 import { OrderDetailsCard } from "./OrderDetailsCard";
 import type { RecommendedProduct, SuccessOrder } from "@/src/types/checkout-success.types";

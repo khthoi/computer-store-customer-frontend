@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { PromotionHeroBanner } from "@/src/components/promotions/PromotionHeroBanner";
-import { PromotionsSubNav } from "@/src/components/promotions/PromotionsSubNav";
+import { PromotionHeroBanner } from "@/src/components/promotions/page/PromotionHeroBanner";
+import { PromotionsSubNav } from "@/src/components/promotions/page/PromotionsSubNav";
 import { getBannersByPosition } from "@/src/services/storefront-banner.service";
 
 export const dynamic = "force-dynamic";

@@ -11,9 +11,9 @@ export default function ForgotPasswordLoading() {
         </div>
         <div className="space-y-1.5">
           <Skeleton variant="text" className="h-4 w-12" />
-          <Skeleton variant="rectangular" className="h-10 w-full rounded" />
+          <Skeleton variant="rect" className="h-10 w-full rounded" />
         </div>
-        <Skeleton variant="rectangular" className="mt-2 h-12 w-full rounded-lg" />
+        <Skeleton variant="rect" className="mt-2 h-12 w-full rounded-lg" />
         <Skeleton variant="text" className="mx-auto h-4 w-40" />
       </div>
     </div>

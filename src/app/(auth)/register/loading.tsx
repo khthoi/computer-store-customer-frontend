@@ -10,13 +10,13 @@ export function RegisterSkeleton() {
       {[1, 2, 3, 4, 5].map((i) => (
         <div key={i} className="space-y-1.5">
           <Skeleton variant="text" className="h-4 w-24" />
-          <Skeleton variant="rectangular" className="h-10 w-full rounded" />
+          <Skeleton variant="rect" className="h-10 w-full rounded" />
         </div>
       ))}
-      <Skeleton variant="rectangular" className="mt-2 h-12 w-full rounded-lg" />
+      <Skeleton variant="rect" className="mt-2 h-12 w-full rounded-lg" />
       <Skeleton variant="text" className="mx-auto h-4 w-48" />
       {[1, 2, 3].map((i) => (
-        <Skeleton key={i} variant="rectangular" className="h-10 w-full rounded-lg" />
+        <Skeleton key={i} variant="rect" className="h-10 w-full rounded-lg" />
       ))}
     </div>
   );

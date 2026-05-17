@@ -6,7 +6,6 @@ import {
 import type {
   FooterConfigData,
   SearchShortcutItem,
-  StorefrontBanner,
   StorefrontCategoryNode,
   StorefrontLayoutData,
   StorefrontMenu,
@@ -14,6 +13,7 @@ import type {
   StorefrontMenuPosition,
   StorefrontPublicSettings,
 } from "@/src/types/storefront-layout.types";
+import type { StorefrontBanner } from "@/src/types/storefront-home.types";
 import type {
   QuickSuggestionResponse,
   QuickSuggestionVariant,

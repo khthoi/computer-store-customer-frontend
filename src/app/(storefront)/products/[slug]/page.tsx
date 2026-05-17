@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
-import { ProductHeroSection } from "@/src/components/product/ProductHeroSection";
-import { ProductTabsSection } from "@/src/components/product/ProductTabsSection";
-import { RelatedProductsSection } from "@/src/components/product/RelatedProductsSection";
-import { RecentlyViewedSection } from "@/src/components/product/RecentlyViewedSection";
+import { ProductHeroSection } from "@/src/components/product/hero/ProductHeroSection";
+import { ProductTabsSection } from "@/src/components/product/tabs/ProductTabsSection";
+import { RelatedProductsSection } from "@/src/components/product/sections/RelatedProductsSection";
+import { RecentlyViewedSection } from "@/src/components/product/sections/RecentlyViewedSection";
 import type { ProductDetail } from "@/src/components/product/types";
 import {
   getProductBySlugWithMeta,

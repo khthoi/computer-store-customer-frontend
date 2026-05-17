@@ -1,4 +1,4 @@
-import { CheckoutPageReal } from "@/src/components/checkout/CheckoutPageReal";
+import { CheckoutPageReal } from "@/src/components/checkout/page/CheckoutPageReal";
 
 /**
  * /checkout — Shopping Checkout page.

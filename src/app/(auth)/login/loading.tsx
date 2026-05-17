@@ -12,13 +12,13 @@ export function LoginSkeleton() {
       {/* Email field */}
       <div className="space-y-1.5">
         <Skeleton variant="text" className="h-4 w-12" />
-        <Skeleton variant="rectangular" className="h-10 w-full rounded" />
+        <Skeleton variant="rect" className="h-10 w-full rounded" />
       </div>
 
       {/* Password field */}
       <div className="space-y-1.5">
         <Skeleton variant="text" className="h-4 w-20" />
-        <Skeleton variant="rectangular" className="h-10 w-full rounded" />
+        <Skeleton variant="rect" className="h-10 w-full rounded" />
       </div>
 
       {/* Remember me row */}
@@ -28,14 +28,14 @@ export function LoginSkeleton() {
       </div>
 
       {/* Submit */}
-      <Skeleton variant="rectangular" className="h-12 w-full rounded-lg" />
+      <Skeleton variant="rect" className="h-12 w-full rounded-lg" />
 
       {/* Divider */}
       <Skeleton variant="text" className="mx-auto h-4 w-48" />
 
       {/* OAuth buttons */}
       {[1, 2, 3].map((i) => (
-        <Skeleton key={i} variant="rectangular" className="h-10 w-full rounded-lg" />
+        <Skeleton key={i} variant="rect" className="h-10 w-full rounded-lg" />
       ))}
     </div>
   );

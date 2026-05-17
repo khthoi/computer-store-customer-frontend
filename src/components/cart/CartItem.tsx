@@ -6,7 +6,7 @@ import { TrashIcon } from "@heroicons/react/24/outline";
 import { Checkbox } from "@/src/components/ui/Checkbox";
 import { Badge } from "@/src/components/ui/Badge";
 import { Tooltip } from "@/src/components/ui/Tooltip";
-import { QuantityStepper } from "@/src/components/product/QuantityStepper";
+import { QuantityStepper } from "@/src/components/product/atoms/QuantityStepper";
 import { formatVND } from "@/src/lib/format";
 import type { CartItem as CartItemType } from "@/src/store/cart.store";
 

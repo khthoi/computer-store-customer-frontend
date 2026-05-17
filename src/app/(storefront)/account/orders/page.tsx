@@ -1,4 +1,4 @@
-import { OrderListPageInner } from "@/src/components/account/orders/OrderListPageInner";
+import { OrderListPageInner } from "@/src/components/account/orders/page/OrderListPageInner";
 import { getMyOrders } from "@/src/services/account-order.service";
 
 export const dynamic = "force-dynamic";

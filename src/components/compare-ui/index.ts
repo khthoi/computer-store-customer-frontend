@@ -8,26 +8,26 @@ export type {
 } from "./types";
 
 // ─── Components ───────────────────────────────────────────────────────────────
-export { EmptyCompareState } from "./EmptyCompareState";
-export type { EmptyCompareStateProps } from "./EmptyCompareState";
+export { EmptyCompareState } from "./state/EmptyCompareState";
+export type { EmptyCompareStateProps } from "./state/EmptyCompareState";
 
-export { CompareHighlightToggle } from "./CompareHighlightToggle";
-export type { CompareHighlightToggleProps } from "./CompareHighlightToggle";
+export { CompareHighlightToggle } from "./table/CompareHighlightToggle";
+export type { CompareHighlightToggleProps } from "./table/CompareHighlightToggle";
 
-export { CompareHeaderCard } from "./CompareHeaderCard";
-export type { CompareHeaderCardProps } from "./CompareHeaderCard";
+export { CompareHeaderCard } from "./header/CompareHeaderCard";
+export type { CompareHeaderCardProps } from "./header/CompareHeaderCard";
 
-export { CompareRow } from "./CompareRow";
-export type { CompareRowProps } from "./CompareRow";
+export { CompareRow } from "./table/CompareRow";
+export type { CompareRowProps } from "./table/CompareRow";
 
-export { CompareSpecGroup } from "./CompareSpecGroup";
-export type { CompareSpecGroupProps } from "./CompareSpecGroup";
+export { CompareSpecGroup } from "./table/CompareSpecGroup";
+export type { CompareSpecGroupProps } from "./table/CompareSpecGroup";
 
-export { CompareTable } from "./CompareTable";
+export { CompareTable } from "./table/CompareTable";
 
-export { CompareHeaderCardList } from "./CompareHeaderCardList";
+export { CompareHeaderCardList } from "./header/CompareHeaderCardList";
 
-export { CompareBar } from "./CompareBar";
+export { CompareBar } from "./header/CompareBar";
 
-export { CompareProductDrawer } from "./CompareProductDrawer";
-export type { CompareProductDrawerProps } from "./CompareProductDrawer";
+export { CompareProductDrawer } from "./drawer/CompareProductDrawer";
+export type { CompareProductDrawerProps } from "./drawer/CompareProductDrawer";

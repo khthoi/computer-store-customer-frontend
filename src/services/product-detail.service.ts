@@ -32,8 +32,8 @@ import type {
   RatingDistribution,
   StockStatus,
 } from "@/src/components/product/types";
-import type { ProductCardProps } from "@/src/components/product/ProductCard";
-import type { VariantGroup as DrawerVariantGroup } from "@/src/components/product/ProductVariantDrawer";
+import type { ProductCardProps } from "@/src/components/product/card/ProductCard";
+import type { VariantGroup as DrawerVariantGroup } from "@/src/components/product/variants/ProductVariantDrawer";
 import { formatVND } from "@/src/lib/format";
 
 // ─── Public API ─────────────────────────────────────────────────────────────

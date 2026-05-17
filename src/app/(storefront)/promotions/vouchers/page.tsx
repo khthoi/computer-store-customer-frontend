@@ -2,7 +2,7 @@ import {
   getActivePromotions,
   getActivePromotionProducts,
 } from "@/src/services/storefront-promotion.service";
-import { VoucherList } from "@/src/components/promotions/VoucherList";
+import { VoucherList } from "@/src/components/promotions/vouchers/VoucherList";
 import type { StorefrontProductCardDto } from "@/src/types/storefront-product-card.types";
 
 export const dynamic = "force-dynamic";

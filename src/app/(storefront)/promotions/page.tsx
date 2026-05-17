@@ -1,4 +1,4 @@
-import { PromotionsPageInner } from "@/src/components/promotions/PromotionsPageInner";
+import { PromotionsPageInner } from "@/src/components/promotions/page/PromotionsPageInner";
 import { getActiveFlashSale } from "@/src/services/storefront-flash-sale.service";
 import {
   getActivePromotions,

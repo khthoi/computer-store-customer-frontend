@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ProductCardConnected } from "@/src/components/product/ProductCardConnected";
+import { ProductCardConnected } from "@/src/components/product/card/ProductCardConnected";
 import { HomepageProductCarousel } from "./HomepageProductCarousel";
 import type {
   StorefrontHomepageSection,

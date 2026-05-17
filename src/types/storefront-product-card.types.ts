@@ -1,5 +1,5 @@
-import type { ProductCardProps } from "@/src/components/product/ProductCard";
-import type { VariantGroup } from "@/src/components/product/ProductVariantDrawer";
+import type { ProductCardProps } from "@/src/components/product/card/ProductCard";
+import type { VariantGroup } from "@/src/components/product/variants/ProductVariantDrawer";
 import { formatVND } from "@/src/lib/format";
 
 export type StorefrontStockStatus = "in-stock" | "low-stock" | "out-of-stock";

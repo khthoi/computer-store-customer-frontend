@@ -17,7 +17,7 @@ import {
   PlusIcon,
 } from "@heroicons/react/24/outline";
 import { Badge } from "@/src/components/ui/Badge";
-import { PriceTag } from "@/src/components/product/PriceTag";
+import { PriceTag } from "@/src/components/product/atoms/PriceTag";
 import { Tooltip } from "@/src/components/ui/Tooltip";
 import type { CompatibilityStatus } from "./PCPartCard";
 

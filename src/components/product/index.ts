@@ -1,83 +1,83 @@
 // ─── Group 3: Product ─────────────────────────────────────────────────────────
 
-export { ProductCard } from "./ProductCard";
-export type { ProductCardProps } from "./ProductCard";
+export { ProductCard } from "./card/ProductCard";
+export type { ProductCardProps } from "./card/ProductCard";
 
-export { ProductImageGallery } from "./ProductImageGallery";
-export type { ProductImageGalleryProps, GalleryMedia } from "./ProductImageGallery";
+export { ProductImageGallery } from "./hero/ProductImageGallery";
+export type { ProductImageGalleryProps, GalleryMedia } from "./hero/ProductImageGallery";
 
-export { PriceTag } from "./PriceTag";
-export type { PriceTagProps } from "./PriceTag";
+export { PriceTag } from "./atoms/PriceTag";
+export type { PriceTagProps } from "./atoms/PriceTag";
 
-export { RatingStars } from "./RatingStars";
-export type { RatingStarsProps } from "./RatingStars";
+export { RatingStars } from "./atoms/RatingStars";
+export type { RatingStarsProps } from "./atoms/RatingStars";
 
-export { SpecTable } from "./SpecTable";
-export type { SpecTableProps, SpecRow } from "./SpecTable";
+export { SpecTable } from "./tabs/SpecTable";
+export type { SpecTableProps, SpecRow } from "./tabs/SpecTable";
 
-export { VariantSelector } from "./VariantSelector";
-export type { VariantSelectorProps, VariantOption } from "./VariantSelector";
+export { VariantSelector } from "./variants/VariantSelector";
+export type { VariantSelectorProps, VariantOption } from "./variants/VariantSelector";
 
-export { StockBadge } from "./StockBadge";
-export type { StockBadgeProps, StockStatus } from "./StockBadge";
+export { StockBadge } from "./atoms/StockBadge";
+export type { StockBadgeProps, StockStatus } from "./atoms/StockBadge";
 
-export { CompareBar } from "./CompareBar";
-export type { CompareBarProps, CompareProduct } from "./CompareBar";
+export { CompareBar } from "./actions/CompareBar";
+export type { CompareBarProps, CompareProduct } from "./actions/CompareBar";
 
-export { ProductCardSkeleton } from "./ProductCardSkeleton";
-export type { ProductCardSkeletonProps } from "./ProductCardSkeleton";
+export { ProductCardSkeleton } from "./card/ProductCardSkeleton";
+export type { ProductCardSkeletonProps } from "./card/ProductCardSkeleton";
 
-export { ProductCardList } from "./ProductCardList";
-export type { ProductCardListProps, ProductCardListItemsPerRow } from "./ProductCardList";
+export { ProductCardList } from "./card/ProductCardList";
+export type { ProductCardListProps, ProductCardListItemsPerRow } from "./card/ProductCardList";
 
 // ─── Product Detail Page components ───────────────────────────────────────────
 
-export { QuantityStepper } from "./QuantityStepper";
-export type { QuantityStepperProps } from "./QuantityStepper";
+export { QuantityStepper } from "./atoms/QuantityStepper";
+export type { QuantityStepperProps } from "./atoms/QuantityStepper";
 
-export { TrustBadgesRow } from "./TrustBadgesRow";
-export type { TrustBadgesRowProps } from "./TrustBadgesRow";
+export { TrustBadgesRow } from "./atoms/TrustBadgesRow";
+export type { TrustBadgesRowProps } from "./atoms/TrustBadgesRow";
 
-export { ProductActionsBar } from "./ProductActionsBar";
-export type { ProductActionsBarProps } from "./ProductActionsBar";
+export { ProductActionsBar } from "./actions/ProductActionsBar";
+export type { ProductActionsBarProps } from "./actions/ProductActionsBar";
 
-export { WishlistShareBar } from "./WishlistShareBar";
-export type { WishlistShareBarProps } from "./WishlistShareBar";
+export { WishlistShareBar } from "./actions/WishlistShareBar";
+export type { WishlistShareBarProps } from "./actions/WishlistShareBar";
 
-export { DescriptionTab } from "./DescriptionTab";
-export type { DescriptionTabProps } from "./DescriptionTab";
+export { DescriptionTab } from "./tabs/DescriptionTab";
+export type { DescriptionTabProps } from "./tabs/DescriptionTab";
 
-export { PolicyTabContent } from "./PolicyTabContent";
+export { PolicyTabContent } from "./tabs/PolicyTabContent";
 
-export { ReviewCard } from "./ReviewCard";
-export type { ReviewCardProps, Review } from "./ReviewCard";
+export { ReviewCard } from "./reviews/ReviewCard";
+export type { ReviewCardProps, Review } from "./reviews/ReviewCard";
 
-export { ReviewFormModal } from "./ReviewFormModal";
-export type { ReviewFormModalProps } from "./ReviewFormModal";
+export { ReviewFormModal } from "./reviews/ReviewFormModal";
+export type { ReviewFormModalProps } from "./reviews/ReviewFormModal";
 
-export { ReviewSection } from "./ReviewSection";
-export type { ReviewSectionProps, RatingDistribution } from "./ReviewSection";
+export { ReviewSection } from "./reviews/ReviewSection";
+export type { ReviewSectionProps, RatingDistribution } from "./reviews/ReviewSection";
 
-export { StickyAddToCartBar } from "./StickyAddToCartBar";
-export type { StickyAddToCartBarProps } from "./StickyAddToCartBar";
+export { StickyAddToCartBar } from "./actions/StickyAddToCartBar";
+export type { StickyAddToCartBarProps } from "./actions/StickyAddToCartBar";
 
-export { RecentlyViewedSection } from "./RecentlyViewedSection";
-export type { RecentlyViewedSectionProps } from "./RecentlyViewedSection";
+export { RecentlyViewedSection } from "./sections/RecentlyViewedSection";
+export type { RecentlyViewedSectionProps } from "./sections/RecentlyViewedSection";
 
-export { ProductHeroClient } from "./ProductHeroClient";
-export type { ProductHeroClientProps } from "./ProductHeroClient";
+export { ProductHeroClient } from "./hero/ProductHeroClient";
+export type { ProductHeroClientProps } from "./hero/ProductHeroClient";
 
-export { RatingScrollButton } from "./RatingScrollButton";
-export type { RatingScrollButtonProps } from "./RatingScrollButton";
+export { RatingScrollButton } from "./hero/RatingScrollButton";
+export type { RatingScrollButtonProps } from "./hero/RatingScrollButton";
 
-export { ProductHeroSection } from "./ProductHeroSection";
-export type { ProductHeroSectionProps } from "./ProductHeroSection";
+export { ProductHeroSection } from "./hero/ProductHeroSection";
+export type { ProductHeroSectionProps } from "./hero/ProductHeroSection";
 
-export { ProductTabsSection } from "./ProductTabsSection";
-export type { ProductTabsSectionProps } from "./ProductTabsSection";
+export { ProductTabsSection } from "./tabs/ProductTabsSection";
+export type { ProductTabsSectionProps } from "./tabs/ProductTabsSection";
 
-export { RelatedProductsSection } from "./RelatedProductsSection";
-export type { RelatedProductsSectionProps } from "./RelatedProductsSection";
+export { RelatedProductsSection } from "./sections/RelatedProductsSection";
+export type { RelatedProductsSectionProps } from "./sections/RelatedProductsSection";
 
 export type {
   ProductDetail,

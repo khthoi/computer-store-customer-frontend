@@ -17,7 +17,6 @@ export const ROUTES = {
 
   // ── Informational ─────────────────────────────────────────────────────────────
   contact: "/contact",
-  chinhSachDoiTra: "/chinh-sach-doi-tra",
   faq: "/faq",
   supportTechnical: "/support/technical",
 

@@ -9,7 +9,7 @@ import { Badge } from "@/src/components/ui/Badge";
 import { Drawer } from "@/src/components/ui/Drawer";
 import { Select } from "@/src/components/ui/Select";
 import { Pagination } from "@/src/components/navigation/Pagination";
-import { ProductCardList } from "@/src/components/product/ProductCardList";
+import { ProductCardList } from "@/src/components/product/card/ProductCardList";
 import { toProductCardProps } from "@/src/types/storefront-product-card.types";
 import { SearchFiltersPanel } from "./SearchFiltersPanel";
 import { SearchEmptyState } from "./SearchEmptyState";

@@ -12,7 +12,7 @@ export default function FaqLoading() {
           <Skeleton variant="text" className="h-6 w-56 mb-4" />
           <div className="space-y-2">
             {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} variant="rectangular" className="h-12 w-full rounded-lg" />
+              <Skeleton key={i} variant="rect" className="h-12 w-full rounded-lg" />
             ))}
           </div>
         </div>

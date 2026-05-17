@@ -9,7 +9,7 @@ import {
 import { HeartIcon } from "@heroicons/react/24/solid";
 import { Tooltip } from "@/src/components/ui/Tooltip";
 import { Badge } from "@/src/components/ui/Badge";
-import { PriceTag } from "@/src/components/product/PriceTag";
+import { PriceTag } from "@/src/components/product/atoms/PriceTag";
 import type { WishlistVariantItem } from "@/src/types/wishlist.types";
 
 // ─── Props ────────────────────────────────────────────────────────────────────

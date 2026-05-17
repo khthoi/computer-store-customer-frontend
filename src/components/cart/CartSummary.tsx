@@ -5,7 +5,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { Tooltip } from "@/src/components/ui/Tooltip";
 import { Button } from "@/src/components/ui/Button";
 import { Input } from "@/src/components/ui/Input";
-import { TrustBadgesRow } from "@/src/components/product/TrustBadgesRow";
+import { TrustBadgesRow } from "@/src/components/product/atoms/TrustBadgesRow";
 import { formatVND } from "@/src/lib/format";
 import { useCart } from "@/src/store/cart.store";
 import { useCartPriceSummary } from "@/src/hooks/useCartPriceSummary";

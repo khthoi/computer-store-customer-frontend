@@ -13,7 +13,6 @@ const SUPPRESSED_PREFIXES = [
   "/forgot-password",
   "/reset-password",
   "/contact",
-  "/chinh-sach-doi-tra",
   "/faq",
   "/support/technical",
   // CMS-driven static pages (/info/<slug>): narrow centred reading layout.
