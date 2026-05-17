@@ -12,6 +12,7 @@ export interface UserProfile {
   /** "YYYY-MM-DD" — empty string when not set */
   dateOfBirth: string;
   avatarSrc?: string;
+  emailNotificationsEnabled: boolean;
 }
 
 export interface UpdateProfileInput {

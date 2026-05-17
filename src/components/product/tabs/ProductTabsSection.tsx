@@ -18,7 +18,13 @@ export interface ProductTabsSectionProps {
   totalReviews?: number;
 }
 
-type TabValue = "description" | "specs" | "reviews";
+type TabValue = "description" | "specs" | "warranty" | "reviews";
+
+interface SelectedVariantPayload {
+  id: string;
+  warrantyMonths: number | null;
+  warrantyPolicy: string | null;
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -32,6 +38,33 @@ export function ProductTabsSection({ product, totalReviews }: ProductTabsSection
   const baseId = useId();
   const [activeTab, setActiveTab] = useState<TabValue>("description");
   const reviewCount = totalReviews ?? product.reviewCount;
+
+  // ── Selected-variant tracking — drives the warranty tab content ──────────
+  // Seed from the default-or-first variant option so server-render shows
+  // something sensible even before the hero dispatches an update.
+  const initialWarranty = (() => {
+    const opts = product.variantGroups.find((g) => g.key === "variant")?.options
+      ?? product.variantGroups[0]?.options
+      ?? [];
+    const first = opts[0];
+    return {
+      months: first?.warrantyMonths ?? null,
+      policy: first?.warrantyPolicy ?? null,
+    };
+  })();
+  const [warrantyMonths, setWarrantyMonths] = useState<number | null>(initialWarranty.months);
+  const [warrantyPolicy, setWarrantyPolicy] = useState<string | null>(initialWarranty.policy);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<SelectedVariantPayload>).detail;
+      if (!detail) return;
+      setWarrantyMonths(detail.warrantyMonths);
+      setWarrantyPolicy(detail.warrantyPolicy);
+    };
+    window.addEventListener("selectedVariantChange", handler);
+    return () => window.removeEventListener("selectedVariantChange", handler);
+  }, []);
 
   // Listen for cross-component tab-switching (dispatched from rating star click)
   useEffect(() => {
@@ -56,6 +89,7 @@ export function ProductTabsSection({ product, totalReviews }: ProductTabsSection
   const tabs: Array<{ value: TabValue; label: string }> = [
     { value: "description", label: "Mô tả sản phẩm" },
     { value: "specs", label: "Thông số kỹ thuật" },
+    { value: "warranty", label: "Chính sách bảo hành" },
     { value: "reviews", label: `Đánh giá (${reviewCount})` },
   ];
 
@@ -128,6 +162,34 @@ export function ProductTabsSection({ product, totalReviews }: ProductTabsSection
                   <SpecTable specs={group.rows} />
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Warranty */}
+        <div
+          id={`${baseId}-panel-warranty`}
+          role="tabpanel"
+          aria-labelledby={`${baseId}-tab-warranty`}
+          hidden={activeTab !== "warranty"}
+        >
+          {activeTab === "warranty" && (
+            <div className="flex flex-col gap-4">
+              {warrantyMonths != null && warrantyMonths > 0 && (
+                <p className="text-sm text-secondary-700">
+                  Thời gian bảo hành: <span className="font-semibold text-secondary-900">{warrantyMonths} tháng</span>
+                </p>
+              )}
+              {warrantyPolicy && warrantyPolicy.trim().length > 0 ? (
+                <div
+                  className="prose prose-sm max-w-none text-secondary-700"
+                  dangerouslySetInnerHTML={{ __html: warrantyPolicy }}
+                />
+              ) : (
+                <p className="text-sm text-secondary-500">
+                  Phiên bản này chưa có chính sách bảo hành chi tiết.
+                </p>
+              )}
             </div>
           )}
         </div>

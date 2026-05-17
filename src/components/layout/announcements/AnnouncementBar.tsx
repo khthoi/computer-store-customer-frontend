@@ -9,7 +9,12 @@ interface Props {
   bar: StorefrontAnnouncementBar;
 }
 
-const DISMISS_KEY_PREFIX = "ann_bar_dismissed_";
+/**
+ * Timestamp-based cooldown after dismissal. The previous boolean flag silenced
+ * the bar permanently which made admin updates invisible to returning users.
+ */
+const COOLDOWN_KEY_PREFIX = "ann_bar_cooldown_at_";
+const COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const MARQUEE_GAP_PX = 64;
 const MARQUEE_COPY_COUNT = 4;
 const MARQUEE_DURATION_SECONDS = 40;
@@ -21,8 +26,13 @@ export function AnnouncementBar({ bar }: Props) {
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
       setHydrated(true);
-      const flag = window.localStorage.getItem(`${DISMISS_KEY_PREFIX}${bar.id}`);
-      if (flag === "1") setDismissed(true);
+      const raw = window.localStorage.getItem(`${COOLDOWN_KEY_PREFIX}${bar.id}`);
+      if (raw) {
+        const ts = Number(raw);
+        if (Number.isFinite(ts) && Date.now() - ts < COOLDOWN_MS) {
+          setDismissed(true);
+        }
+      }
     });
 
     return () => window.cancelAnimationFrame(frameId);
@@ -35,7 +45,10 @@ export function AnnouncementBar({ bar }: Props) {
   function handleDismiss() {
     setDismissed(true);
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(`${DISMISS_KEY_PREFIX}${bar.id}`, "1");
+      window.localStorage.setItem(
+        `${COOLDOWN_KEY_PREFIX}${bar.id}`,
+        String(Date.now()),
+      );
     }
   }
 

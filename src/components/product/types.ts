@@ -22,6 +22,10 @@ export interface VariantOptionData {
   color?: string;
   /** Numeric delta in VND (e.g. 4000000) */
   priceDelta: number;
+  /** Số tháng bảo hành (per-variant) */
+  warrantyMonths?: number | null;
+  /** Chính sách bảo hành — HTML (per-variant) */
+  warrantyPolicy?: string | null;
 }
 
 export interface VariantGroup {

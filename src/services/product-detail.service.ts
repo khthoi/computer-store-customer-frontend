@@ -198,6 +198,8 @@ function buildVariantGroup(
         label: v.name,
         stock: v.stock,
         priceDelta: v.salePrice - basePrice,
+        warrantyMonths: v.warrantyMonths,
+        warrantyPolicy: v.warrantyPolicy,
       })),
     },
   ];

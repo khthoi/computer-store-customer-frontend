@@ -65,7 +65,7 @@ export function DescriptionTab({ htmlContent }: DescriptionTabProps) {
           <button
             type="button"
             onClick={() => setExpanded(false)}
-            className="inline-flex items-center gap-1 text-sm font-semibold text-primary-700 underline-offset-4 transition-colors hover:text-primary-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 rounded"
+            className="inline-flex items-center gap-1 rounded-full border border-primary-200 bg-white px-4 py-1.5 text-sm font-semibold text-primary-700 shadow-md transition-colors hover:bg-primary-50 hover:text-primary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
           >
             Thu gọn
             <ChevronUpIcon className="h-4 w-4" aria-hidden="true" />

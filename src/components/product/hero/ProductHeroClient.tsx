@@ -14,7 +14,6 @@ import { VariantSelector } from "@/src/components/product/variants/VariantSelect
 import { PriceTag } from "@/src/components/product/atoms/PriceTag";
 import { QuantityStepper } from "@/src/components/product/atoms/QuantityStepper";
 import { ProductActionsBar } from "@/src/components/product/actions/ProductActionsBar";
-import { TrustBadgesRow } from "@/src/components/product/atoms/TrustBadgesRow";
 import { StickyAddToCartBar } from "@/src/components/product/actions/StickyAddToCartBar";
 import { ContactModal } from "@/src/components/product/actions/ContactModal";
 import { formatVND } from "@/src/lib/format";
@@ -119,16 +118,35 @@ export function ProductHeroClient({
     return Number.isFinite(n) && n > 0 ? n : null;
   }, [selectedVariants]);
 
-  // Find the per-variant stock so the quantity stepper / validation reflects
-  // the *selected* variant, not the product-level default.
-  const selectedVariantStock = useMemo<number>(() => {
+  // Find the currently-selected variant option (whole object) once so stock,
+  // warranty, and other per-variant details stay in sync.
+  const selectedVariantOption = useMemo(() => {
     const group = product.variantGroups.find((g) => g.key === "variant")
       ?? product.variantGroups[0];
-    if (!group) return product.stockQuantity;
+    if (!group) return null;
     const val = selectedVariants[group.key];
-    const opt = group.options.find((o) => o.value === val);
-    return typeof opt?.stock === "number" ? opt.stock : product.stockQuantity;
-  }, [product.variantGroups, product.stockQuantity, selectedVariants]);
+    return group.options.find((o) => o.value === val) ?? null;
+  }, [product.variantGroups, selectedVariants]);
+
+  const selectedVariantStock = typeof selectedVariantOption?.stock === "number"
+    ? selectedVariantOption.stock
+    : product.stockQuantity;
+
+  const selectedWarrantyMonths = selectedVariantOption?.warrantyMonths ?? null;
+
+  // Broadcast variant change so other sections (e.g. tabs) can react.
+  useEffect(() => {
+    if (!selectedVariantOption) return;
+    window.dispatchEvent(
+      new CustomEvent("selectedVariantChange", {
+        detail: {
+          id: selectedVariantOption.value,
+          warrantyMonths: selectedVariantOption.warrantyMonths ?? null,
+          warrantyPolicy: selectedVariantOption.warrantyPolicy ?? null,
+        },
+      }),
+    );
+  }, [selectedVariantOption]);
 
   // Clamp quantity when variant changes (e.g. user picks a variant with lower stock)
   useEffect(() => {
@@ -271,6 +289,13 @@ export function ProductHeroClient({
           {ratingSlot}
         </div>
 
+        {/* Warranty line (per-variant) */}
+        {selectedWarrantyMonths != null && selectedWarrantyMonths > 0 && (
+          <div className="text-xs text-secondary-600">
+            Bảo hành: <span className="font-medium text-secondary-800">{selectedWarrantyMonths} tháng</span>
+          </div>
+        )}
+
         {/* Price */}
         <PriceTag
           currentPrice={computedPrice}
@@ -386,9 +411,6 @@ export function ProductHeroClient({
           productSlug={product.slug}
           variantId={selectedVariantId}
         />
-
-        {/* Trust badges */}
-        <TrustBadgesRow />
       </div>
 
       {/* Sticky add-to-cart bar (portals to fixed position) */}

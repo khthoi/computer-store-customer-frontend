@@ -27,6 +27,7 @@ import type {
   StorefrontPublicSettings,
 } from "@/src/types/storefront-layout.types";
 import { Navbar } from "./Navbar";
+import { NotificationBell } from "./NotificationBell";
 
 export interface HeaderUser {
   name: string;
@@ -267,6 +268,12 @@ function ActionIcons({
         </div>
         <span className="text-[10px] font-medium leading-none">Yêu thích</span>
       </Link>
+
+      {user && (
+        <div className="hidden md:block">
+          <NotificationBell />
+        </div>
+      )}
 
       {user ? (
         <div className="relative hidden sm:block">

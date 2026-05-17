@@ -41,6 +41,7 @@ export const ROUTES = {
     returns: "/account/returns",
     return: (id: string) => `/account/returns/${id}`,
     wishlist: "/account/wishlist",
+    notifications: "/account/notifications",
     support: "/account/support",
     ticket: (id: string) => `/account/support/${id}`,
   },

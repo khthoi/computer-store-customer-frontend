@@ -13,7 +13,8 @@ interface Props {
   onDismissed: (id: string) => void;
 }
 
-const DISMISS_KEY_PREFIX = "popup_dismissed_";
+const SESSION_FLAG_PREFIX = "popup_dismissed_";
+const COOLDOWN_KEY_PREFIX = "popup_cooldown_at_";
 
 function isCenter(position: PopupPosition): boolean {
   return position === "center";
@@ -86,8 +87,14 @@ export function Popup({ popup, onDismissed }: Props) {
 
   function handleClose() {
     setOpen(false);
-    if (popup.showOnce && typeof window !== "undefined") {
-      window.sessionStorage.setItem(`${DISMISS_KEY_PREFIX}${popup.id}`, "1");
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        `${COOLDOWN_KEY_PREFIX}${popup.id}`,
+        String(Date.now()),
+      );
+      if (popup.showOnce) {
+        window.sessionStorage.setItem(`${SESSION_FLAG_PREFIX}${popup.id}`, "1");
+      }
     }
     onDismissed(popup.id);
   }

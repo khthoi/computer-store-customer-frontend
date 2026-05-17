@@ -13,7 +13,7 @@
 // ─── GET /products/:slug ────────────────────────────────────────────────────
 
 export type BackendProductStatus = "published" | "draft" | "archived";
-export type BackendVariantStatus = "visible" | "hidden" | "out_of_stock";
+export type BackendVariantStatus = "visible" | "hidden";
 export type BackendImageType = "main" | "gallery";
 
 export interface BackendProductVariantImage {
@@ -61,7 +61,6 @@ export interface BackendProductDetail {
   sku: string;
   shortDescription: string | null;
   descriptionHtml: string;
-  warrantyPolicy: string | null;
   averageRating: number;
   reviewCount: number;
   status: BackendProductStatus;

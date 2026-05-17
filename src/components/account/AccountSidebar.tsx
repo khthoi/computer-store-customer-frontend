@@ -11,6 +11,7 @@ import {
   ArrowUturnLeftIcon,
   ChatBubbleLeftRightIcon,
   WrenchScrewdriverIcon,
+  BellIcon,
 } from "@heroicons/react/24/outline";
 import {
   UserIcon as UserIconSolid,
@@ -21,6 +22,7 @@ import {
   ArrowUturnLeftIcon as ArrowUturnLeftIconSolid,
   ChatBubbleLeftRightIcon as ChatBubbleLeftRightIconSolid,
   WrenchScrewdriverIcon as WrenchScrewdriverIconSolid,
+  BellIcon as BellIconSolid,
 } from "@heroicons/react/24/solid";
 import { Avatar } from "@/src/components/ui/Avatar";
 import { Tabs } from "@/src/components/ui/Tabs";
@@ -64,6 +66,13 @@ const NAV_ITEMS: NavItem[] = [
     tabValue: "orders",
     icon: <ShoppingBagIcon className="h-5 w-5" />,
     iconActive: <ShoppingBagIconSolid className="h-5 w-5" />,
+  },
+  {
+    href: "/account/notifications",
+    label: "Thông báo",
+    tabValue: "notifications",
+    icon: <BellIcon className="h-5 w-5" />,
+    iconActive: <BellIconSolid className="h-5 w-5" />,
   },
   {
     href: "/account/returns",

@@ -21,6 +21,7 @@ interface RawProfile {
   totalOrders: number;
   totalSpent: number;
   lastOrderAt: string | null;
+  emailNotificationsEnabled?: boolean;
 }
 
 function mapProfile(r: RawProfile): UserProfile {
@@ -38,6 +39,7 @@ function mapProfile(r: RawProfile): UserProfile {
     gender: normalizedGender,
     dateOfBirth: r.dateOfBirth ?? "",
     avatarSrc: r.avatarUrl ?? undefined,
+    emailNotificationsEnabled: r.emailNotificationsEnabled ?? true,
   };
 }
 
@@ -65,6 +67,16 @@ export async function updateMyProfile(
   const raw = await apiFetch<RawProfile>("/users/me", {
     method: "PUT",
     body: JSON.stringify(body),
+  });
+  return mapProfile(raw);
+}
+
+export async function updateNotificationPreferences(
+  emailNotificationsEnabled: boolean,
+): Promise<UserProfile> {
+  const raw = await apiFetch<RawProfile>("/users/me/notification-preferences", {
+    method: "PATCH",
+    body: JSON.stringify({ emailNotificationsEnabled }),
   });
   return mapProfile(raw);
 }
