@@ -67,19 +67,21 @@ export async function getProductReviews(
   productId: string,
   page: number,
   limit: number,
-  filters: { rating?: number; hasImages?: boolean } = {},
+  filters: { rating?: number; hasImages?: boolean; variantId?: string } = {},
 ): Promise<{
   items: Review[];
   total: number;
   page: number;
   limit: number;
   distribution: RatingDistribution;
+  averageRating: number;
 }> {
   const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (filters.rating && filters.rating >= 1 && filters.rating <= 5) {
     qs.set("rating", String(filters.rating));
   }
   if (filters.hasImages) qs.set("hasImages", "true");
+  if (filters.variantId) qs.set("variantId", filters.variantId);
   const backend = await apiFetch<BackendReviewListResult>(
     `/products/${encodeURIComponent(productId)}/reviews?${qs.toString()}`,
   );
@@ -89,6 +91,7 @@ export async function getProductReviews(
     page: backend.page,
     limit: backend.limit,
     distribution: mapDistribution(backend.distribution),
+    averageRating: typeof backend.averageRating === "number" ? backend.averageRating : 0,
   };
 }
 
@@ -200,6 +203,13 @@ function buildVariantGroup(
         priceDelta: v.salePrice - basePrice,
         warrantyMonths: v.warrantyMonths,
         warrantyPolicy: v.warrantyPolicy,
+        description: v.description ?? null,
+        images: (v.images ?? []).map((img, idx) => ({
+          key: img.id || `${v.id}-img-${idx}`,
+          src: img.url,
+          alt: img.alt ?? v.name,
+          thumbnailSrc: img.url,
+        })),
       })),
     },
   ];

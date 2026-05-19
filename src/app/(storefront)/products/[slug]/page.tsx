@@ -38,12 +38,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
     defaultVariantId
       ? getVariantSpecs(defaultVariantId).catch(() => [])
       : Promise.resolve([]),
-    getProductReviews(product.id, 1, 5).catch(() => ({
+    getProductReviews(product.id, 1, 5, { variantId: defaultVariantId }).catch(() => ({
       items: [],
       total: 0,
       page: 1,
       limit: 5,
       distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      averageRating: 0,
     })),
     categoryId
       ? getRelatedProducts(categoryId, product.id, 10).catch(() => [])
@@ -52,6 +53,10 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   const productDetail: ProductDetail = {
     ...product,
+    // Override product-wide rating/count with the default-variant slice so the
+    // SKU stars and badge reflect the initially selected variant.
+    rating: reviewsResult.averageRating,
+    reviewCount: reviewsResult.total,
     specGroups,
     reviews: reviewsResult.items,
     ratingDistribution: reviewsResult.distribution,

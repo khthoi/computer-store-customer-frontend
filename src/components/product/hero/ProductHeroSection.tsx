@@ -1,6 +1,5 @@
 import { Breadcrumb } from "@/src/components/navigation/Breadcrumb";
 import { ProductImageGallery } from "@/src/components/product/hero/ProductImageGallery";
-import { RatingScrollButton } from "@/src/components/product/hero/RatingScrollButton";
 import { ProductHeroClient } from "@/src/components/product/hero/ProductHeroClient";
 import type { ProductDetail } from "@/src/components/product/types";
 
@@ -21,7 +20,7 @@ export interface ProductHeroSectionProps {
  */
 export function ProductHeroSection({ product, totalReviews }: ProductHeroSectionProps) {
   const firstImage = product.images[0];
-  const reviewCount = totalReviews ?? product.reviewCount;
+  const initialReviewCount = totalReviews ?? product.reviewCount;
 
   return (
     <section className="bg-white border-b border-secondary-200">
@@ -53,12 +52,8 @@ export function ProductHeroSection({ product, totalReviews }: ProductHeroSection
             <ProductHeroClient
               product={product}
               thumbnailSrc={firstImage?.src ?? ""}
-              ratingSlot={
-                <RatingScrollButton
-                  value={product.rating}
-                  count={reviewCount}
-                />
-              }
+              initialRating={product.rating}
+              initialReviewCount={initialReviewCount}
             />
           </div>
         </div>

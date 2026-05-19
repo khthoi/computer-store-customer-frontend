@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   BoltIcon,
@@ -16,8 +16,10 @@ import { QuantityStepper } from "@/src/components/product/atoms/QuantityStepper"
 import { ProductActionsBar } from "@/src/components/product/actions/ProductActionsBar";
 import { StickyAddToCartBar } from "@/src/components/product/actions/StickyAddToCartBar";
 import { ContactModal } from "@/src/components/product/actions/ContactModal";
+import { RatingScrollButton } from "@/src/components/product/hero/RatingScrollButton";
 import { formatVND } from "@/src/lib/format";
 import { addCartItem } from "@/src/services/cart.service";
+import { getProductReviews } from "@/src/services/product-detail.service";
 import { useAuth } from "@/src/store/auth.store";
 import type { ProductDetail, VariantGroup } from "@/src/components/product/types";
 
@@ -25,9 +27,11 @@ import type { ProductDetail, VariantGroup } from "@/src/components/product/types
 
 export interface ProductHeroClientProps {
   product: ProductDetail;
-  /** Slot: the rating stars button rendered in the right column */
-  ratingSlot: ReactNode;
   thumbnailSrc: string;
+  /** Average rating for the initially selected variant (default variant) */
+  initialRating: number;
+  /** Review count for the initially selected variant */
+  initialReviewCount: number;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -66,8 +70,9 @@ function isVariantOutOfStock(
 
 export function ProductHeroClient({
   product,
-  ratingSlot,
   thumbnailSrc,
+  initialRating,
+  initialReviewCount,
 }: ProductHeroClientProps) {
   // Read ?variant=<id> from URL — when navigated from search/quick suggestion,
   // pre-select that variant so price/stock/specs reflect the user's choice.
@@ -134,7 +139,7 @@ export function ProductHeroClient({
 
   const selectedWarrantyMonths = selectedVariantOption?.warrantyMonths ?? null;
 
-  // Broadcast variant change so other sections (e.g. tabs) can react.
+  // Broadcast variant change so other sections (e.g. tabs, gallery) can react.
   useEffect(() => {
     if (!selectedVariantOption) return;
     window.dispatchEvent(
@@ -143,10 +148,36 @@ export function ProductHeroClient({
           id: selectedVariantOption.value,
           warrantyMonths: selectedVariantOption.warrantyMonths ?? null,
           warrantyPolicy: selectedVariantOption.warrantyPolicy ?? null,
+          description: selectedVariantOption.description ?? null,
+          images: selectedVariantOption.images ?? [],
         },
       }),
     );
   }, [selectedVariantOption]);
+
+  // ── Per-variant rating (SKU stars + count) ───────────────────────────────
+  const [variantRating, setVariantRating] = useState<number>(initialRating);
+  const [variantReviewCount, setVariantReviewCount] = useState<number>(initialReviewCount);
+  const latestRatingVariantRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedVariantOption) return;
+    const variantId = selectedVariantOption.value;
+    if (latestRatingVariantRef.current === variantId) return;
+    latestRatingVariantRef.current = variantId;
+
+    getProductReviews(product.id, 1, 1, { variantId })
+      .then((result) => {
+        if (latestRatingVariantRef.current !== variantId) return;
+        setVariantRating(result.averageRating);
+        setVariantReviewCount(result.total);
+      })
+      .catch(() => {
+        if (latestRatingVariantRef.current !== variantId) return;
+        setVariantRating(0);
+        setVariantReviewCount(0);
+      });
+  }, [selectedVariantOption, product.id]);
 
   // Clamp quantity when variant changes (e.g. user picks a variant with lower stock)
   useEffect(() => {
@@ -286,7 +317,7 @@ export function ProductHeroClient({
             SKU: {product.sku}
           </span>
           <span className="text-secondary-200" aria-hidden="true">|</span>
-          {ratingSlot}
+          <RatingScrollButton value={variantRating} count={variantReviewCount} />
         </div>
 
         {/* Warranty line (per-variant) */}

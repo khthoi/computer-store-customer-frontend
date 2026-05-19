@@ -26,6 +26,10 @@ export interface VariantOptionData {
   warrantyMonths?: number | null;
   /** Chính sách bảo hành — HTML (per-variant) */
   warrantyPolicy?: string | null;
+  /** Mô tả sản phẩm theo phiên bản — HTML */
+  description?: string | null;
+  /** Bộ ảnh riêng cho phiên bản này */
+  images?: GalleryMedia[];
 }
 
 export interface VariantGroup {

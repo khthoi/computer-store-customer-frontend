@@ -116,6 +116,7 @@ export interface BackendReviewListResult {
   page: number;
   limit: number;
   distribution: Record<"1" | "2" | "3" | "4" | "5", number>;
+  averageRating: number;
 }
 
 // ─── GET /products (list, used for related) ─────────────────────────────────

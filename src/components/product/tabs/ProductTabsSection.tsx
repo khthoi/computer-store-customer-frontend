@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { DescriptionTab } from "@/src/components/product/tabs/DescriptionTab";
 import { SpecTable } from "@/src/components/product/tabs/SpecTable";
 import { ReviewSection } from "@/src/components/product/reviews/ReviewSection";
-import type { ProductDetail } from "@/src/components/product/types";
+import type { ProductDetail, SpecGroup } from "@/src/components/product/types";
+import { getVariantSpecs } from "@/src/services/product-detail.service";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,6 +25,8 @@ interface SelectedVariantPayload {
   id: string;
   warrantyMonths: number | null;
   warrantyPolicy: string | null;
+  description?: string | null;
+  images?: unknown;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -54,13 +57,33 @@ export function ProductTabsSection({ product, totalReviews }: ProductTabsSection
   })();
   const [warrantyMonths, setWarrantyMonths] = useState<number | null>(initialWarranty.months);
   const [warrantyPolicy, setWarrantyPolicy] = useState<string | null>(initialWarranty.policy);
+  const [descriptionHtml, setDescriptionHtml] = useState<string>(product.descriptionHtml);
+  const [specGroups, setSpecGroups] = useState<SpecGroup[]>(product.specGroups);
 
+  const latestSpecsVariantRef = useRef<string | null>(null);
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<SelectedVariantPayload>).detail;
       if (!detail) return;
       setWarrantyMonths(detail.warrantyMonths);
       setWarrantyPolicy(detail.warrantyPolicy);
+      // Always reflect the selected variant's description — even when empty,
+      // so switching from a variant that has content to one without correctly
+      // clears the panel instead of leaving stale HTML from the previous variant.
+      setDescriptionHtml(detail.description ?? "");
+      // Fetch specs for the newly selected variant. Track the latest requested
+      // variant id so a slow in-flight response can't overwrite a newer one.
+      if (detail.id) {
+        latestSpecsVariantRef.current = detail.id;
+        const requestedId = detail.id;
+        getVariantSpecs(requestedId)
+          .then((groups) => {
+            if (latestSpecsVariantRef.current === requestedId) setSpecGroups(groups);
+          })
+          .catch(() => {
+            if (latestSpecsVariantRef.current === requestedId) setSpecGroups([]);
+          });
+      }
     };
     window.addEventListener("selectedVariantChange", handler);
     return () => window.removeEventListener("selectedVariantChange", handler);
@@ -141,7 +164,13 @@ export function ProductTabsSection({ product, totalReviews }: ProductTabsSection
           hidden={activeTab !== "description"}
         >
           {activeTab === "description" && (
-            <DescriptionTab htmlContent={product.descriptionHtml} />
+            descriptionHtml.trim().length > 0 ? (
+              <DescriptionTab htmlContent={descriptionHtml} />
+            ) : (
+              <p className="text-sm text-secondary-500">
+                Phiên bản này chưa có mô tả chi tiết.
+              </p>
+            )
           )}
         </div>
 
@@ -153,16 +182,22 @@ export function ProductTabsSection({ product, totalReviews }: ProductTabsSection
           hidden={activeTab !== "specs"}
         >
           {activeTab === "specs" && (
-            <div className="flex flex-col gap-8">
-              {product.specGroups.map((group) => (
-                <div key={group.heading}>
-                  <h3 className="text-sm font-semibold text-primary-700 uppercase tracking-wide mb-3">
-                    {group.heading}
-                  </h3>
-                  <SpecTable specs={group.rows} />
-                </div>
-              ))}
-            </div>
+            specGroups.length > 0 ? (
+              <div className="flex flex-col gap-8">
+                {specGroups.map((group) => (
+                  <div key={group.heading}>
+                    <h3 className="text-sm font-semibold text-primary-700 uppercase tracking-wide mb-3">
+                      {group.heading}
+                    </h3>
+                    <SpecTable specs={group.rows} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-secondary-500">
+                Phiên bản này chưa có thông số kỹ thuật.
+              </p>
+            )
           )}
         </div>
 

@@ -239,25 +239,40 @@ export function ProductImageGallery({
   className = "",
 }: ProductImageGalleryProps) {
   // All hooks must be called unconditionally before any early return.
+  const [currentItems, setCurrentItems] = useState<GalleryMedia[]>(items);
   const [activeIndex, setActiveIndex] = useState(
     items.length > 0 ? clamp(defaultIndex, 0, items.length - 1) : 0
   );
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
 
+  // Listen for variant change → swap to that variant's images. Always reflect
+  // the selected variant, even when it has zero images — otherwise switching
+  // from A (with images) to B (without) would keep showing A's images.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ images?: GalleryMedia[] }>).detail;
+      const next = Array.isArray(detail?.images) ? detail.images : [];
+      setCurrentItems(next);
+      setActiveIndex(0);
+    };
+    window.addEventListener("selectedVariantChange", handler);
+    return () => window.removeEventListener("selectedVariantChange", handler);
+  }, []);
+
   const handleThumbnailKeyDown = useCallback(
     (e: KeyboardEvent<HTMLButtonElement>, idx: number) => {
-      if (e.key === "ArrowRight") setActiveIndex(clamp(idx + 1, 0, items.length - 1));
-      if (e.key === "ArrowLeft") setActiveIndex(clamp(idx - 1, 0, items.length - 1));
+      if (e.key === "ArrowRight") setActiveIndex(clamp(idx + 1, 0, currentItems.length - 1));
+      if (e.key === "ArrowLeft") setActiveIndex(clamp(idx - 1, 0, currentItems.length - 1));
     },
-    [items.length]
+    [currentItems.length]
   );
 
   // Reset loaded state when active image changes
   useEffect(() => { setImgLoaded(false); }, [activeIndex]);
 
   // Guard: render placeholder when no media items are provided (after all hooks)
-  if (items.length === 0) {
+  if (currentItems.length === 0) {
     return (
       <div className={["flex flex-col gap-3", className].filter(Boolean).join(" ")}>
         <div className="aspect-square overflow-hidden rounded-xl border border-secondary-200 bg-secondary-100 flex items-center justify-center">
@@ -267,7 +282,7 @@ export function ProductImageGallery({
     );
   }
 
-  const activeItem = items[activeIndex];
+  const activeItem = currentItems[activeIndex] ?? currentItems[0];
 
   return (
     <div className={["flex flex-col gap-3", className].filter(Boolean).join(" ")}>
@@ -326,13 +341,13 @@ export function ProductImageGallery({
       </div>
 
       {/* ── Thumbnail strip ── */}
-      {items.length > 1 && (
+      {currentItems.length > 1 && (
         <div
           role="tablist"
           aria-label="Product images"
           className="flex gap-2 overflow-x-auto pb-1"
         >
-          {items.map((item, idx) => {
+          {currentItems.map((item, idx) => {
             const isActive = idx === activeIndex;
             return (
               <button
@@ -377,7 +392,7 @@ export function ProductImageGallery({
       {/* ── Lightbox ── */}
       {lightboxOpen && (
         <Lightbox
-          items={items}
+          items={currentItems}
           activeIndex={activeIndex}
           onClose={() => setLightboxOpen(false)}
           onNavigate={setActiveIndex}
