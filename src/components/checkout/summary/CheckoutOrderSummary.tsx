@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useCart } from "@/src/store/cart.store";
 import { useCheckout } from "@/src/store/checkout.store";
 import { useCartPriceSummary } from "@/src/hooks/useCartPriceSummary";
 import { formatVND } from "@/src/lib/format";
 import { Tooltip } from "@/src/components/ui/Tooltip";
+import { getMyCart, CART_CHANGED_EVENT } from "@/src/services/cart.service";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -49,7 +51,27 @@ export function CheckoutOrderSummary() {
   const { shippingMethodId } = checkoutState;
 
   const selectedShipping = shippingMethods.find((m) => m.id === shippingMethodId);
-  const shippingFee = selectedShipping?.price ?? 0;
+  const rawShippingFee = selectedShipping?.price ?? 0;
+
+  // Backend cart tells us whether a free-shipping promotion is active.
+  const [freeShippingApplied, setFreeShippingApplied] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      getMyCart()
+        .then((c) => { if (!cancelled) setFreeShippingApplied(Boolean(c.freeShippingApplied)); })
+        .catch(() => { /* keep last known state */ });
+    };
+    load();
+    const handler = () => load();
+    window.addEventListener(CART_CHANGED_EVENT, handler);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(CART_CHANGED_EVENT, handler);
+    };
+  }, []);
+
+  const shippingFee = freeShippingApplied ? 0 : rawShippingFee;
 
   const { subtotal, savings, couponDiscount, total, billableCount } =
     useCartPriceSummary(items, ALL_ITEMS, appliedCoupon, shippingFee);
@@ -146,8 +168,18 @@ export function CheckoutOrderSummary() {
 
         <SummaryRow
           label="Phí vận chuyển"
-          value={shippingFee === 0 ? "Miễn phí" : formatVND(shippingFee)}
-          valueClass={shippingFee === 0 ? "text-success-600" : "text-secondary-900"}
+          value={
+            freeShippingApplied
+              ? "Miễn phí (KM)"
+              : shippingFee === 0
+              ? "Miễn phí"
+              : formatVND(shippingFee)
+          }
+          valueClass={
+            freeShippingApplied || shippingFee === 0
+              ? "text-success-600"
+              : "text-secondary-900"
+          }
         />
       </div>
 

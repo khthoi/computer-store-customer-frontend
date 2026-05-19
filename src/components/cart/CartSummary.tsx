@@ -168,8 +168,8 @@ export function CartSummary({ items, selectedIds }: CartSummaryProps) {
 
         <SummaryRow
           label="Phí vận chuyển"
-          value="Miễn phí"
-          valueClass="text-success-600"
+          value="Tính khi thanh toán"
+          valueClass="text-secondary-500"
         />
       </div>
 

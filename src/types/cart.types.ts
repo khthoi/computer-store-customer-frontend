@@ -4,9 +4,28 @@ export type PromotionActionType =
   | "fixed_cart"
   | "free_shipping"
   | "bulk"
+  | "bundle"
+  | "bxgy"
   | "other";
 export type PromotionSource = "auto" | "coupon";
 export type PromotionStatus = "active" | "unmet" | "exhausted";
+
+export interface BundleComponentInfo {
+  label: string;
+  requiredQty: number;
+  achievedQty: number;
+  satisfied: boolean;
+}
+
+export interface BxgyInfo {
+  buyQty: number;
+  getQty: number;
+  applications: number;
+  giftVariantId: number | null;
+  giftLabel: string | null;
+  unitPrice: number;
+  discountPct: number;
+}
 
 export interface AppliedPromotion {
   promotionId: number;
@@ -22,6 +41,9 @@ export interface AppliedPromotion {
   unmetReason?: string;
   appliedToVariantIds?: string[];
   couponCode?: string;
+  appliesToShipping?: boolean;
+  bundleComponents?: BundleComponentInfo[];
+  bxgy?: BxgyInfo;
 }
 
 export interface CartItemVariant {
@@ -58,5 +80,6 @@ export interface Cart {
   totalDiscount: number;
   total: number;
   appliedPromotions: AppliedPromotion[];
+  freeShippingApplied: boolean;
   updatedAt: string;
 }

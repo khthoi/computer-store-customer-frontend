@@ -406,7 +406,35 @@ export function CartPageReal() {
                         ))}
                       </ul>
                     )}
-                    {p.status === "active" && p.discountAmount > 0 && (
+                    {/* Bundle progress */}
+                    {p.bundleComponents && p.bundleComponents.length > 0 && (
+                      <ul className="mt-1.5 space-y-0.5 text-[11px]">
+                        {p.bundleComponents.map((c, idx) => (
+                          <li
+                            key={idx}
+                            className={
+                              c.satisfied
+                                ? "text-success-700"
+                                : "text-warning-600"
+                            }
+                          >
+                            {c.satisfied ? "✓" : "○"} {c.label}: {c.achievedQty}/{c.requiredQty}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {/* BXGY summary */}
+                    {p.bxgy && p.bxgy.applications > 0 && (
+                      <p className="mt-1.5 text-[11px] text-success-700">
+                        Áp dụng {p.bxgy.applications} lần · tặng {p.bxgy.getQty * p.bxgy.applications} sản phẩm
+                      </p>
+                    )}
+                    {p.status === "active" && p.appliesToShipping && (
+                      <p className="mt-1.5 text-sm font-semibold text-success-700">
+                        Áp dụng cho phí vận chuyển
+                      </p>
+                    )}
+                    {p.status === "active" && !p.appliesToShipping && p.discountAmount > 0 && (
                       <p className="mt-1.5 text-sm font-semibold text-success-700">
                         −{formatVND(p.discountAmount)}
                       </p>
@@ -432,6 +460,14 @@ export function CartPageReal() {
                 −{formatVND(cart.totalDiscount)}
               </span>
             </div>
+            {cart.freeShippingApplied && (
+              <div className="flex justify-between text-sm text-secondary-700">
+                <span>Phí vận chuyển</span>
+                <span className="text-success-700 font-medium">
+                  Miễn phí (KM)
+                </span>
+              </div>
+            )}
             <div className="my-2 border-t border-secondary-100" />
             <div className="flex justify-between text-base font-semibold text-secondary-900">
               <span>Thành tiền</span>
